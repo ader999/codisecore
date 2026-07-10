@@ -23,9 +23,9 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-juqh_khg4tumcgovtxo3zo++7u9#ne+o*kbsln5clqe%10nwu)'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.environ.get('DJANGO_DEBUG', 'True').lower() in ('true', '1', 'yes')
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = os.environ.get('DJANGO_ALLOWED_HOSTS', '*').split(',')
 
 
 # Application definition
@@ -78,11 +78,11 @@ WSGI_APPLICATION = 'codiselu.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'postgres',
-        'USER': 'postgres',
-        'PASSWORD': 'zl39puxfl9fiqb9v',
-        'HOST': 'cdice-codiseludb-wedvsj-270e2e-178-104-105-241.sslip.io',
-        'PORT': '5432',
+        'NAME': os.environ.get('DB_NAME', 'postgres'),
+        'USER': os.environ.get('DB_USER', 'postgres'),
+        'PASSWORD': os.environ.get('DB_PASSWORD', 'zl39puxfl9fiqb9v'),
+        'HOST': os.environ.get('DB_HOST', 'cdice-codiseludb-wedvsj-270e2e-178-104-105-241.sslip.io'),
+        'PORT': os.environ.get('DB_PORT', '5432'),
     }
 }
 
@@ -121,6 +121,12 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
-STATIC_URL = 'static/'
+STATIC_URL = '/static/'
+STATIC_ROOT = BASE_DIR / 'static'
+
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'
+
+CSRF_TRUSTED_ORIGINS = os.environ.get('DJANGO_CSRF_TRUSTED_ORIGINS', '').split(',') if os.environ.get('DJANGO_CSRF_TRUSTED_ORIGINS') else []
 
 AUTH_USER_MODEL = 'codiselu.User'
