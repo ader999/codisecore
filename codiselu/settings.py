@@ -77,8 +77,12 @@ WSGI_APPLICATION = 'codiselu.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'postgres',
+        'USER': 'postgres',
+        'PASSWORD': 'zl39puxfl9fiqb9v',
+        'HOST': 'cdice-codiseludb-wedvsj-270e2e-178-104-105-241.sslip.io',
+        'PORT': '5432',
     }
 }
 
