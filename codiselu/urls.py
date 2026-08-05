@@ -1,5 +1,6 @@
 from django.contrib import admin
 from django.urls import path, include
+from django.views.generic import RedirectView
 from rest_framework.routers import DefaultRouter
 from .views import UserViewSet, CiudadViewSet, CircuitoCreativoViewSet
 
@@ -11,6 +12,7 @@ router.register(r'circuitos-creativos', CircuitoCreativoViewSet, basename='circu
 router.register(r'circuitocreativos', CircuitoCreativoViewSet, basename='circuitocreativos')
 
 urlpatterns = [
+    path('', RedirectView.as_view(url='/api/', permanent=False)),
     path('admin/', admin.site.urls),
     path('api/', include(router.urls)),
 ]
