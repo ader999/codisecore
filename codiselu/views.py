@@ -2,13 +2,16 @@ from rest_framework import viewsets, permissions, status, generics
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
-from .models import User, Ciudad, CircuitoCreativo
+from .models import User, Ciudad, CircuitoCreativo, PuntoInteres, DatoHistorico, GaleriaMultimedia
 from .serializers import (
     UserSerializer,
     RegisterSerializer,
     LoginSerializer,
     CiudadSerializer,
-    CircuitoCreativoSerializer
+    CircuitoCreativoSerializer,
+    PuntoInteresSerializer,
+    DatoHistoricoSerializer,
+    GaleriaMultimediaSerializer
 )
 
 
@@ -91,4 +94,23 @@ class CircuitoCreativoViewSet(viewsets.ModelViewSet):
     queryset = CircuitoCreativo.objects.all().order_by('id')
     serializer_class = CircuitoCreativoSerializer
     permission_classes = [permissions.AllowAny]
+
+
+class PuntoInteresViewSet(viewsets.ModelViewSet):
+    queryset = PuntoInteres.objects.all().order_by('orden')
+    serializer_class = PuntoInteresSerializer
+    permission_classes = [permissions.AllowAny]
+
+
+class DatoHistoricoViewSet(viewsets.ModelViewSet):
+    queryset = DatoHistorico.objects.all().order_by('id')
+    serializer_class = DatoHistoricoSerializer
+    permission_classes = [permissions.AllowAny]
+
+
+class GaleriaMultimediaViewSet(viewsets.ModelViewSet):
+    queryset = GaleriaMultimedia.objects.all().order_by('id')
+    serializer_class = GaleriaMultimediaSerializer
+    permission_classes = [permissions.AllowAny]
+
 
