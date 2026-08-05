@@ -7,8 +7,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 COPY pyproject.toml uv.lock ./
 RUN pip install --no-cache-dir uv && \
-    uv export --no-dev --format=requirements-txt > requirements.txt && \
-    pip install --no-cache-dir -r requirements.txt gunicorn
+    uv export --no-hashes --no-dev --format=requirements-txt > requirements.txt && \
+    pip install --no-cache-dir -r requirements.txt
 
 FROM python:3.13-slim
 
