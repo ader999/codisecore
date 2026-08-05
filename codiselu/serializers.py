@@ -2,7 +2,7 @@ from rest_framework import serializers
 from django.contrib.auth import authenticate
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError as DjangoValidationError
-from .models import User, Ciudad, CircuitoCreativo
+from .models import User, Ciudad, CircuitoCreativo, PuntoInteres, DatoHistorico, GaleriaMultimedia
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -92,24 +92,54 @@ class LoginSerializer(serializers.Serializer):
         return attrs
 
 
+class DatoHistoricoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = DatoHistorico
+        fields = ['id', 'ciudad', 'punto_interes', 'titulo', 'tipo', 'contenido', 'epoca_o_ano']
+
+
+class GaleriaMultimediaSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = GaleriaMultimedia
+        fields = ['id', 'ciudad', 'punto_interes', 'titulo', 'tipo', 'imagen', 'video_url']
+
+
+class PuntoInteresSerializer(serializers.ModelSerializer):
+    datos_historicos = DatoHistoricoSerializer(many=True, read_only=True)
+    galeria = GaleriaMultimediaSerializer(many=True, read_only=True)
+    circuito_nombre = serializers.ReadOnlyField(source='circuito.nombre')
+
+    class Meta:
+        model = PuntoInteres
+        fields = [
+            'id', 'circuito', 'circuito_nombre', 'nombre', 'descripcion',
+            'tipo', 'orden', 'latitud', 'longitud', 'datos_historicos', 'galeria'
+        ]
+
 
 class CircuitoCreativoSerializer(serializers.ModelSerializer):
     ciudad_nombre = serializers.ReadOnlyField(source='ciudad.nombre')
+    puntos_interes = PuntoInteresSerializer(many=True, read_only=True)
 
     class Meta:
         model = CircuitoCreativo
         fields = [
             'id', 'ciudad', 'ciudad_nombre', 'nombre', 'descripcion',
-            'distancia_km', 'duracion_estimada', 'dificultad', 'imagen_mapa'
+            'distancia_km', 'duracion_estimada', 'dificultad', 'imagen_mapa',
+            'puntos_interes'
         ]
 
 
 class CiudadSerializer(serializers.ModelSerializer):
     circuitos = CircuitoCreativoSerializer(many=True, read_only=True)
+    datos_historicos = DatoHistoricoSerializer(many=True, read_only=True)
+    galeria = GaleriaMultimediaSerializer(many=True, read_only=True)
 
     class Meta:
         model = Ciudad
         fields = [
             'id', 'nombre', 'descripcion', 'imagen_portada',
-            'latitud_centro', 'longitud_centro', 'circuitos'
+            'latitud_centro', 'longitud_centro', 'circuitos',
+            'datos_historicos', 'galeria'
         ]
+

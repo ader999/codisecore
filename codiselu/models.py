@@ -43,3 +43,76 @@ class CircuitoCreativo(models.Model):
 
     def __str__(self):
         return f"{self.nombre} ({self.ciudad.nombre})"
+
+
+class PuntoInteres(models.Model):
+    TIPO_PUNTO_CHOICES = [
+        ('Historico', 'Sitio Histórico'),
+        ('Cultural', 'Sitio Cultural / Galería / Museo'),
+        ('Natural', 'Sitio Natural'),
+        ('Taller', 'Taller Artesanal / Saber Popular'),
+        ('Gastronomico', 'Gastronomía Tradicional'),
+    ]
+
+    circuito = models.ForeignKey(CircuitoCreativo, related_name='puntos_interes', on_delete=models.CASCADE)
+    nombre = models.CharField(max_length=150)
+    descripcion = models.TextField()
+    tipo = models.CharField(max_length=20, choices=TIPO_PUNTO_CHOICES, default='Cultural')
+    orden = models.PositiveIntegerField(default=1, help_text="Orden dentro del circuito")
+    latitud = models.FloatField()
+    longitud = models.FloatField()
+
+    class Meta:
+        ordering = ['orden']
+        verbose_name = "Punto de Interés"
+        verbose_name_plural = "Puntos de Interés"
+
+    def __str__(self):
+        return f"{self.orden}. {self.nombre} ({self.circuito.nombre})"
+
+
+class DatoHistorico(models.Model):
+    TIPO_DATOS_CHOICES = [
+        ('Hito', 'Hito Histórico'),
+        ('Leyenda', 'Mito o Leyenda'),
+        ('SaberPopular', 'Saber Popular / Tradición'),
+        ('Gastronomia', 'Dato Gastronómico'),
+    ]
+
+    ciudad = models.ForeignKey(Ciudad, related_name='datos_historicos', on_delete=models.CASCADE, null=True, blank=True)
+    punto_interes = models.ForeignKey(PuntoInteres, related_name='datos_historicos', on_delete=models.CASCADE, null=True, blank=True)
+    titulo = models.CharField(max_length=200)
+    tipo = models.CharField(max_length=20, choices=TIPO_DATOS_CHOICES, default='Hito')
+    contenido = models.TextField()
+    epoca_o_ano = models.CharField(max_length=50, blank=True, null=True, help_text="Ej: Siglo XVI, 1912, Época Colonial")
+
+    class Meta:
+        verbose_name = "Dato Histórico"
+        verbose_name_plural = "Datos Históricos"
+
+    def __str__(self):
+        origen = self.ciudad.nombre if self.ciudad else (self.punto_interes.nombre if self.punto_interes else "General")
+        return f"{self.titulo} - [{origen}] ({self.tipo})"
+
+
+class GaleriaMultimedia(models.Model):
+    TIPO_CHOICES = [
+        ('Imagen', 'Imagen'),
+        ('Video', 'Video'),
+    ]
+
+    ciudad = models.ForeignKey(Ciudad, related_name='galeria', on_delete=models.CASCADE, null=True, blank=True)
+    punto_interes = models.ForeignKey(PuntoInteres, related_name='galeria', on_delete=models.CASCADE, null=True, blank=True)
+    titulo = models.CharField(max_length=150, blank=True, null=True)
+    tipo = models.CharField(max_length=10, choices=TIPO_CHOICES, default='Imagen')
+    imagen = models.ImageField(upload_to='galeria/imagenes/', blank=True, null=True)
+    video_url = models.URLField(blank=True, null=True, help_text="URL de YouTube, Vimeo o servidor de video")
+
+    class Meta:
+        verbose_name = "Galería Multimedia"
+        verbose_name_plural = "Galerías Multimedia"
+
+    def __str__(self):
+        origen = self.ciudad.nombre if self.ciudad else (self.punto_interes.nombre if self.punto_interes else "General")
+        return f"{self.tipo}: {self.titulo or 'Sin título'} [{origen}]"
+

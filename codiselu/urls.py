@@ -7,6 +7,9 @@ from .views import (
     UserViewSet,
     CiudadViewSet,
     CircuitoCreativoViewSet,
+    PuntoInteresViewSet,
+    DatoHistoricoViewSet,
+    GaleriaMultimediaViewSet,
     RegisterView,
     LoginView,
     UserProfileView
@@ -17,7 +20,9 @@ router.register(r'users', UserViewSet, basename='user')
 router.register(r'ciudades', CiudadViewSet, basename='ciudad')
 router.register(r'circuitos', CircuitoCreativoViewSet, basename='circuito')
 router.register(r'circuitos-creativos', CircuitoCreativoViewSet, basename='circuitocreativo')
-router.register(r'circuitocreativos', CircuitoCreativoViewSet, basename='circuitocreativos')
+router.register(r'puntos-interes', PuntoInteresViewSet, basename='puntointeres')
+router.register(r'datos-historicos', DatoHistoricoViewSet, basename='datohistorico')
+router.register(r'galeria-multimedia', GaleriaMultimediaViewSet, basename='galeriamultimedia')
 
 urlpatterns = [
     path('', RedirectView.as_view(url='/api/', permanent=False)),
@@ -31,4 +36,5 @@ urlpatterns = [
     path('api/login/', LoginView.as_view(), name='login'),
     path('api/', include(router.urls)),
 ]
+
 
