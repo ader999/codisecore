@@ -15,7 +15,7 @@ class User(AbstractUser):
 class Ciudad(models.Model):
     nombre = models.CharField(max_length=100, unique=True)
     descripcion = models.TextField()
-    imagen_portada = models.ImageField(upload_to='ciudades/portadas/')
+    imagen_portada = models.ImageField(upload_to='ciudades/portadas/', blank=True, null=True)
     latitud_centro = models.FloatField()
     longitud_centro = models.FloatField()
 
