@@ -29,7 +29,7 @@ COPY . .
 RUN mkdir -p /app/static /app/media && \
     DJANGO_SECRET_KEY=dummy \
     DJANGO_DEBUG=False \
-    DB_HOST=localhost \
+    USE_SQLITE=True \
     python manage.py collectstatic --noinput || true
 
 EXPOSE 8000
