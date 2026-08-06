@@ -26,11 +26,11 @@ RUN chmod +x /entrypoint.sh
 
 COPY . .
 
-RUN mkdir -p /app/static /app/media && \
+RUN mkdir -p /app/staticfiles /app/media && \
     DJANGO_SECRET_KEY=dummy \
     DJANGO_DEBUG=False \
     USE_SQLITE=True \
-    python manage.py collectstatic --noinput || true
+    python manage.py collectstatic --noinput
 
 EXPOSE 8000
 
