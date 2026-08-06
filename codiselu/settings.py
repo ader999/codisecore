@@ -169,7 +169,33 @@ STORAGES = {
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
-CSRF_TRUSTED_ORIGINS = os.environ.get('DJANGO_CSRF_TRUSTED_ORIGINS', '').split(',') if os.environ.get('DJANGO_CSRF_TRUSTED_ORIGINS') else []
+# Security & CSRF settings for reverse proxy (e.g. Railway)
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
+csrf_origins_env = os.environ.get('DJANGO_CSRF_TRUSTED_ORIGINS', '')
+if csrf_origins_env:
+    CSRF_TRUSTED_ORIGINS = []
+    for origin in csrf_origins_env.split(','):
+        origin = origin.strip()
+        if origin:
+            if not origin.startswith(('http://', 'https://')):
+                origin = f'https://{origin}'
+            CSRF_TRUSTED_ORIGINS.append(origin)
+else:
+    CSRF_TRUSTED_ORIGINS = [
+        'https://*.railway.app',
+        'https://*.up.railway.app',
+        'http://localhost:8000',
+        'http://127.0.0.1:8000',
+    ]
+
+for host in ALLOWED_HOSTS:
+    host_clean = host.strip()
+    if host_clean and host_clean != '*':
+        if not host_clean.startswith(('http://', 'https://')):
+            https_origin = f'https://{host_clean}'
+            if https_origin not in CSRF_TRUSTED_ORIGINS:
+                CSRF_TRUSTED_ORIGINS.append(https_origin)
 
 AUTH_USER_MODEL = 'codiselu.User'
 
