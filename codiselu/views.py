@@ -238,25 +238,49 @@ class InversionTuristaViewSet(viewsets.ModelViewSet):
 
 class EventoViewSet(viewsets.ModelViewSet):
     """
-    Endpoint para consultar y registrar eventos creados por protagonistas o empresas.
-    - GET: Público. Permite filtrar por ciudad, empresa o eventos activos.
-    - POST/PUT/DELETE: Requiere autenticación.
+    Endpoint para consultar y registrar eventos creados por protagonistas, empresas o administradores.
+    - Los administradores (staff) pueden registrar eventos oficiales de las ciudades.
+    - Soporta filtrado por mural de publicación (?en_mural=true o ?mural=true) y eventos oficiales (?es_oficial=true).
     """
     queryset = Evento.objects.filter(esta_activo=True).order_by('-fecha_inicio')
     serializer_class = EventoSerializer
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
 
     def perform_create(self, serializer):
-        serializer.save(creador=self.request.user)
+        user = self.request.user
+        es_oficial_data = serializer.validated_data.get('es_oficial', None)
+        if es_oficial_data is None:
+            es_oficial = user.is_staff
+        else:
+            es_oficial = es_oficial_data if user.is_staff else False
+        serializer.save(creador=user, es_oficial=es_oficial)
 
     def get_queryset(self):
+        from django.utils import timezone
+
         queryset = Evento.objects.all().order_by('-fecha_inicio')
         if not self.request.user.is_staff:
             queryset = queryset.filter(esta_activo=True)
+
         ciudad_id = self.request.query_params.get('ciudad')
         if ciudad_id:
             queryset = queryset.filter(ciudad_id=ciudad_id)
+
         empresa_id = self.request.query_params.get('empresa')
         if empresa_id:
             queryset = queryset.filter(empresa_id=empresa_id)
+
+        es_oficial = self.request.query_params.get('es_oficial') or self.request.query_params.get('solo_oficiales')
+        if es_oficial is not None:
+            if es_oficial.lower() in ['true', '1']:
+                queryset = queryset.filter(es_oficial=True)
+            elif es_oficial.lower() in ['false', '0']:
+                queryset = queryset.filter(es_oficial=False)
+
+        en_mural = self.request.query_params.get('en_mural') or self.request.query_params.get('mural')
+        if en_mural is not None and en_mural.lower() in ['true', '1']:
+            mural_ids = [e.id for e in queryset if e.en_mural]
+            queryset = queryset.filter(id__in=mural_ids)
+
         return queryset
+

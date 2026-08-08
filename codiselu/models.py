@@ -244,6 +244,8 @@ class Evento(models.Model):
     precio_entrada = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     es_gratuito = models.BooleanField(default=True)
     cupo_maximo = models.PositiveIntegerField(null=True, blank=True)
+    es_oficial = models.BooleanField(default=False, help_text="Indica si es un evento oficial de la ciudad publicado por administradores")
+    dias_previos_mural = models.PositiveIntegerField(default=7, help_text="Días antes de la fecha de inicio en los que el evento aparece en el mural de publicación")
     esta_activo = models.BooleanField(default=True)
     fecha_creacion = models.DateTimeField(auto_now_add=True)
 
@@ -252,5 +254,16 @@ class Evento(models.Model):
         verbose_name = "Evento"
         verbose_name_plural = "Eventos"
 
+    @property
+    def en_mural(self):
+        from django.utils import timezone
+        ahora = timezone.now()
+        fecha_visibilidad = self.fecha_inicio - timezone.timedelta(days=self.dias_previos_mural)
+        if self.fecha_fin:
+            return fecha_visibilidad <= ahora <= self.fecha_fin
+        return fecha_visibilidad <= ahora <= (self.fecha_inicio + timezone.timedelta(days=1))
+
     def __str__(self):
-        return f"{self.titulo} - {self.fecha_inicio.strftime('%Y-%m-%d %H:%M')}"
+        tipo = "Oficial" if self.es_oficial else "Protagonista"
+        return f"[{tipo}] {self.titulo} - {self.fecha_inicio.strftime('%Y-%m-%d %H:%M')}"
+

@@ -102,8 +102,9 @@ class InversionTuristaAdmin(admin.ModelAdmin):
 
 @admin.register(Evento)
 class EventoAdmin(admin.ModelAdmin):
-    list_display = ('id', 'titulo', 'creador', 'empresa', 'ciudad', 'fecha_inicio', 'precio_entrada', 'es_gratuito', 'esta_activo')
-    list_filter = ('esta_activo', 'es_gratuito', 'ciudad', 'fecha_inicio')
+    list_display = ('id', 'titulo', 'creador', 'empresa', 'ciudad', 'fecha_inicio', 'es_oficial', 'dias_previos_mural', 'precio_entrada', 'es_gratuito', 'esta_activo')
+    list_filter = ('es_oficial', 'esta_activo', 'es_gratuito', 'ciudad', 'fecha_inicio')
     search_fields = ('titulo', 'descripcion', 'ubicacion', 'creador__username', 'empresa__nombre')
+
 
 
