@@ -320,6 +320,7 @@ class EventoSerializer(serializers.ModelSerializer):
     creador_username = serializers.ReadOnlyField(source='creador.username')
     empresa_nombre = serializers.ReadOnlyField(source='empresa.nombre')
     ciudad_nombre = serializers.ReadOnlyField(source='ciudad.nombre')
+    en_mural = serializers.ReadOnlyField()
 
     class Meta:
         model = Evento
@@ -327,7 +328,8 @@ class EventoSerializer(serializers.ModelSerializer):
             'id', 'creador', 'creador_username', 'empresa', 'empresa_nombre',
             'ciudad', 'ciudad_nombre', 'titulo', 'descripcion', 'fecha_inicio',
             'fecha_fin', 'ubicacion', 'latitud', 'longitud', 'imagen',
-            'precio_entrada', 'es_gratuito', 'cupo_maximo', 'esta_activo',
-            'fecha_creacion'
+            'precio_entrada', 'es_gratuito', 'cupo_maximo', 'es_oficial',
+            'dias_previos_mural', 'en_mural', 'esta_activo', 'fecha_creacion'
         ]
-        read_only_fields = ['id', 'creador', 'creador_username', 'fecha_creacion']
+        read_only_fields = ['id', 'creador', 'creador_username', 'en_mural', 'fecha_creacion']
+
