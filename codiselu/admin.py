@@ -1,7 +1,8 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from .models import (
-    User, Ciudad, CircuitoCreativo, PuntoInteres, DatoHistorico, GaleriaMultimedia
+    User, Ciudad, CircuitoCreativo, PuntoInteres, DatoHistorico,
+    GaleriaMultimedia, UsuarioPuntoVisitado
 )
 
 @admin.register(User)
@@ -61,4 +62,12 @@ class DatoHistoricoAdmin(admin.ModelAdmin):
 class GaleriaMultimediaAdmin(admin.ModelAdmin):
     list_display = ('titulo', 'tipo', 'ciudad', 'punto_interes')
     list_filter = ('tipo', 'ciudad')
+
+
+@admin.register(UsuarioPuntoVisitado)
+class UsuarioPuntoVisitadoAdmin(admin.ModelAdmin):
+    list_display = ('id', 'usuario', 'punto_interes', 'es_validada', 'distancia_metros', 'fecha_visita')
+    list_filter = ('es_validada', 'fecha_visita', 'usuario', 'punto_interes__circuito__ciudad')
+    search_fields = ('usuario__username', 'punto_interes__nombre')
+    readonly_fields = ('es_validada', 'distancia_metros')
 

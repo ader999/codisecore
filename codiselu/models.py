@@ -95,6 +95,8 @@ class DatoHistorico(models.Model):
         return f"{self.titulo} - [{origen}] ({self.tipo})"
 
 
+from django.utils import timezone
+
 class GaleriaMultimedia(models.Model):
     TIPO_CHOICES = [
         ('Imagen', 'Imagen'),
@@ -115,4 +117,27 @@ class GaleriaMultimedia(models.Model):
     def __str__(self):
         origen = self.ciudad.nombre if self.ciudad else (self.punto_interes.nombre if self.punto_interes else "General")
         return f"{self.tipo}: {self.titulo or 'Sin título'} [{origen}]"
+
+
+class UsuarioPuntoVisitado(models.Model):
+    usuario = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='puntos_visitados')
+    punto_interes = models.ForeignKey(PuntoInteres, on_delete=models.CASCADE, related_name='visitas_usuarios')
+    fecha_visita = models.DateTimeField(default=timezone.now)
+    latitud_usuario = models.FloatField(null=True, blank=True, help_text="Latitud GPS reportada por el usuario")
+    longitud_usuario = models.FloatField(null=True, blank=True, help_text="Longitud GPS reportada por el usuario")
+    es_validada = models.BooleanField(default=False, help_text="Indica si la visita fue validada por estar en/cerca del punto")
+    distancia_metros = models.FloatField(null=True, blank=True, help_text="Distancia calculada en metros entre el usuario y el punto de interés")
+
+    class Meta:
+        db_table = 'usuario_puntos_visitados'
+        unique_together = ('usuario', 'punto_interes')
+        ordering = ['-fecha_visita']
+        verbose_name = "Punto Visitado"
+        verbose_name_plural = "Puntos Visitados"
+
+    def __str__(self):
+        estado = "Validada" if self.es_validada else "No validada"
+        return f"{self.usuario.username} visitó {self.punto_interes.nombre} ({estado})"
+
+
 

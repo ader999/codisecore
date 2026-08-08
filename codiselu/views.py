@@ -2,7 +2,11 @@ from rest_framework import viewsets, permissions, status, generics
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
-from .models import User, Ciudad, CircuitoCreativo, PuntoInteres, DatoHistorico, GaleriaMultimedia
+from rest_framework.decorators import action
+from .models import (
+    User, Ciudad, CircuitoCreativo, PuntoInteres, DatoHistorico,
+    GaleriaMultimedia, UsuarioPuntoVisitado
+)
 from .serializers import (
     UserSerializer,
     RegisterSerializer,
@@ -11,7 +15,8 @@ from .serializers import (
     CircuitoCreativoSerializer,
     PuntoInteresSerializer,
     DatoHistoricoSerializer,
-    GaleriaMultimediaSerializer
+    GaleriaMultimediaSerializer,
+    UsuarioPuntoVisitadoSerializer
 )
 
 
@@ -112,5 +117,46 @@ class GaleriaMultimediaViewSet(viewsets.ModelViewSet):
     queryset = GaleriaMultimedia.objects.all().order_by('id')
     serializer_class = GaleriaMultimediaSerializer
     permission_classes = [permissions.AllowAny]
+
+
+class VisitaViewSet(viewsets.ModelViewSet):
+    """
+    Endpoint para registrar y consultar las visitas del usuario autenticado.
+    - POST /api/visitas/ -> Guarda una visita para el usuario actual. Body: {"punto_interes_id": 1}
+    - GET /api/visitas/ -> Lista completa de visitas del usuario autenticado.
+    - GET /api/visitas/ids/ -> Lista array simple de IDs de los puntos de interés visitados por el usuario.
+    """
+    serializer_class = UsuarioPuntoVisitadoSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        user = self.request.user
+        if user.is_staff:
+            return UsuarioPuntoVisitado.objects.all().order_by('-fecha_visita')
+        return UsuarioPuntoVisitado.objects.filter(usuario=user).order_by('-fecha_visita')
+
+    def perform_create(self, serializer):
+        serializer.save(usuario=self.request.user)
+
+    def list(self, request, *args, **kwargs):
+        queryset = self.filter_queryset(self.get_queryset())
+        
+        # Soporte para parametro query ?ids_only=true o ?only_ids=true
+        if request.query_params.get('ids_only') == 'true' or request.query_params.get('only_ids') == 'true':
+            ids = list(queryset.values_list('punto_interes_id', flat=True))
+            return Response(ids)
+
+        return super().list(request, *args, **kwargs)
+
+    @action(detail=False, methods=['get'], url_path='ids')
+    def obtener_ids_visitados(self, request):
+        """
+        Retorna la lista directa de IDs de los puntos de interés recorridos por el usuario autenticado.
+        Ejemplo respuesta: [1, 5, 8]
+        """
+        queryset = self.get_queryset()
+        ids = list(queryset.values_list('punto_interes_id', flat=True))
+        return Response(ids)
+
 
 
