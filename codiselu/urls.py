@@ -10,6 +10,7 @@ from .views import (
     PuntoInteresViewSet,
     DatoHistoricoViewSet,
     GaleriaMultimediaViewSet,
+    VisitaViewSet,
     RegisterView,
     LoginView,
     UserProfileView
@@ -23,6 +24,8 @@ router.register(r'circuitos-creativos', CircuitoCreativoViewSet, basename='circu
 router.register(r'puntos-interes', PuntoInteresViewSet, basename='puntointeres')
 router.register(r'datos-historicos', DatoHistoricoViewSet, basename='datohistorico')
 router.register(r'galeria-multimedia', GaleriaMultimediaViewSet, basename='galeriamultimedia')
+router.register(r'visitas', VisitaViewSet, basename='visita')
+router.register(r'usuario-puntos-visitados', VisitaViewSet, basename='usuariopuntosvisitados')
 
 urlpatterns = [
     path('', RedirectView.as_view(url='/api/', permanent=False)),
