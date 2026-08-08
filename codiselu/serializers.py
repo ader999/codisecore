@@ -5,7 +5,8 @@ from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError as DjangoValidationError
 from .models import (
     User, Ciudad, CircuitoCreativo, PuntoInteres, DatoHistorico,
-    GaleriaMultimedia, UsuarioPuntoVisitado
+    GaleriaMultimedia, UsuarioPuntoVisitado, Empresa, OportunidadInversion,
+    InversionTurista, Evento
 )
 
 
@@ -240,5 +241,93 @@ class UsuarioPuntoVisitadoSerializer(serializers.ModelSerializer):
         return visita
 
 
+class EmpresaSerializer(serializers.ModelSerializer):
+    usuario_username = serializers.ReadOnlyField(source='usuario.username')
+    ciudad_nombre = serializers.ReadOnlyField(source='ciudad.nombre')
+    punto_interes_nombre = serializers.ReadOnlyField(source='punto_interes.nombre')
+
+    class Meta:
+        model = Empresa
+        fields = [
+            'id', 'usuario', 'usuario_username', 'ciudad', 'ciudad_nombre',
+            'punto_interes', 'punto_interes_nombre', 'nombre', 'descripcion',
+            'categoria', 'direccion', 'telefono_contacto', 'email_contacto',
+            'sitio_web', 'imagen_portada', 'latitud', 'longitud',
+            'acepta_inversiones', 'fecha_creacion'
+        ]
+        read_only_fields = ['id', 'usuario', 'usuario_username', 'fecha_creacion']
 
 
+class OportunidadInversionSerializer(serializers.ModelSerializer):
+    empresa_nombre = serializers.ReadOnlyField(source='empresa.nombre')
+    empresa_acepta_inversiones = serializers.ReadOnlyField(source='empresa.acepta_inversiones')
+
+    class Meta:
+        model = OportunidadInversion
+        fields = [
+            'id', 'empresa', 'empresa_nombre', 'empresa_acepta_inversiones',
+            'titulo', 'descripcion', 'monto_requerido', 'monto_minimo_inversion',
+            'monto_recaudado', 'retorno_estimado', 'tipo_inversor_permitido',
+            'esta_activa', 'fecha_publicacion'
+        ]
+        read_only_fields = ['id', 'fecha_publicacion']
+
+    def validate(self, attrs):
+        empresa = attrs.get('empresa')
+        if empresa and not empresa.acepta_inversiones:
+            raise serializers.ValidationError({
+                "empresa": "Esta empresa o destino turístico no tiene habilitada la opción de aceptar inversiones."
+            })
+        return attrs
+
+
+class InversionTuristaSerializer(serializers.ModelSerializer):
+    inversionista_username = serializers.ReadOnlyField(source='inversionista.username')
+    empresa_id = serializers.ReadOnlyField(source='oportunidad.empresa.id')
+    empresa_nombre = serializers.ReadOnlyField(source='oportunidad.empresa.nombre')
+    oportunidad_titulo = serializers.ReadOnlyField(source='oportunidad.titulo')
+
+    class Meta:
+        model = InversionTurista
+        fields = [
+            'id', 'inversionista', 'inversionista_username', 'oportunidad',
+            'oportunidad_titulo', 'empresa_id', 'empresa_nombre',
+            'monto_propuesto', 'tipo_inversor', 'mensaje', 'telefono_inversor',
+            'email_inversor', 'estado', 'fecha_solicitud'
+        ]
+        read_only_fields = ['id', 'inversionista', 'inversionista_username', 'estado', 'fecha_solicitud']
+
+    def validate(self, attrs):
+        oportunidad = attrs.get('oportunidad')
+        if oportunidad:
+            if not oportunidad.empresa.acepta_inversiones:
+                raise serializers.ValidationError({
+                    "oportunidad": "La empresa asociada a esta oportunidad de inversión no acepta inversiones actualmente."
+                })
+            if not oportunidad.esta_activa:
+                raise serializers.ValidationError({
+                    "oportunidad": "Esta oportunidad de inversión no se encuentra activa."
+                })
+            monto = attrs.get('monto_propuesto')
+            if monto and monto < oportunidad.monto_minimo_inversion:
+                raise serializers.ValidationError({
+                    "monto_propuesto": f"El monto propuesto no puede ser menor al monto mínimo de inversión (${oportunidad.monto_minimo_inversion})."
+                })
+        return attrs
+
+
+class EventoSerializer(serializers.ModelSerializer):
+    creador_username = serializers.ReadOnlyField(source='creador.username')
+    empresa_nombre = serializers.ReadOnlyField(source='empresa.nombre')
+    ciudad_nombre = serializers.ReadOnlyField(source='ciudad.nombre')
+
+    class Meta:
+        model = Evento
+        fields = [
+            'id', 'creador', 'creador_username', 'empresa', 'empresa_nombre',
+            'ciudad', 'ciudad_nombre', 'titulo', 'descripcion', 'fecha_inicio',
+            'fecha_fin', 'ubicacion', 'latitud', 'longitud', 'imagen',
+            'precio_entrada', 'es_gratuito', 'cupo_maximo', 'esta_activo',
+            'fecha_creacion'
+        ]
+        read_only_fields = ['id', 'creador', 'creador_username', 'fecha_creacion']

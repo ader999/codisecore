@@ -140,4 +140,117 @@ class UsuarioPuntoVisitado(models.Model):
         return f"{self.usuario.username} visitó {self.punto_interes.nombre} ({estado})"
 
 
+class Empresa(models.Model):
+    TIPO_EMPRESA_CHOICES = [
+        ('Gastronomia', 'Gastronomía / Restaurante'),
+        ('Hospedaje', 'Hotel / Hospedaje'),
+        ('Taller', 'Taller Artesanal / Galería'),
+        ('Destino', 'Destino Turístico / Sitio de Interés'),
+        ('Servicios', 'Servicios Turísticos / Tours'),
+        ('Otro', 'Otro'),
+    ]
 
+    usuario = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='empresas')
+    ciudad = models.ForeignKey(Ciudad, on_delete=models.SET_NULL, null=True, blank=True, related_name='empresas')
+    punto_interes = models.ForeignKey(PuntoInteres, on_delete=models.SET_NULL, null=True, blank=True, related_name='empresas')
+    nombre = models.CharField(max_length=200)
+    descripcion = models.TextField()
+    categoria = models.CharField(max_length=50, choices=TIPO_EMPRESA_CHOICES, default='Destino')
+    direccion = models.CharField(max_length=255, blank=True, null=True)
+    telefono_contacto = models.CharField(max_length=20, blank=True, null=True)
+    email_contacto = models.EmailField(blank=True, null=True)
+    sitio_web = models.URLField(blank=True, null=True)
+    imagen_portada = models.ImageField(upload_to='empresas/portadas/', blank=True, null=True)
+    latitud = models.FloatField(null=True, blank=True)
+    longitud = models.FloatField(null=True, blank=True)
+    acepta_inversiones = models.BooleanField(default=False, help_text="Indica si esta empresa o destino turístico acepta ofertas o proyectos de inversión")
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Empresa / Destino Turístico"
+        verbose_name_plural = "Empresas y Destinos Turísticos"
+
+    def __str__(self):
+        return f"{self.nombre} ({self.usuario.username})"
+
+
+class OportunidadInversion(models.Model):
+    TIPO_INVERSOR_CHOICES = [
+        ('Todos', 'Nacionales y Extranjeros'),
+        ('Nacional', 'Solo Nacionales'),
+        ('Extranjero', 'Solo Extranjeros'),
+    ]
+
+    empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name='oportunidades_inversion')
+    titulo = models.CharField(max_length=200)
+    descripcion = models.TextField()
+    monto_requerido = models.DecimalField(max_digits=12, decimal_places=2, help_text="Monto objetivo de inversión en USD o C$")
+    monto_minimo_inversion = models.DecimalField(max_digits=12, decimal_places=2, default=100.00, help_text="Monto mínimo para invertir")
+    monto_recaudado = models.DecimalField(max_digits=12, decimal_places=2, default=0.00)
+    retorno_estimado = models.CharField(max_length=150, blank=True, null=True, help_text="Ejemplo: 15% rendimiento anual, participación de utilidades")
+    tipo_inversor_permitido = models.CharField(max_length=20, choices=TIPO_INVERSOR_CHOICES, default='Todos')
+    esta_activa = models.BooleanField(default=True)
+    fecha_publicacion = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Oportunidad de Inversión"
+        verbose_name_plural = "Oportunidades de Inversión"
+
+    def __str__(self):
+        return f"Oportunidad: {self.titulo} - {self.empresa.nombre}"
+
+
+class InversionTurista(models.Model):
+    TIPO_INVERSOR_CHOICES = [
+        ('Nacional', 'Turista / Inversionista Nacional'),
+        ('Extranjero', 'Turista / Inversionista Extranjero'),
+    ]
+    ESTADO_CHOICES = [
+        ('Pendiente', 'Pendiente de revisión'),
+        ('Aprobada', 'Aprobada / Confirmada'),
+        ('Rechazada', 'Rechazada'),
+    ]
+
+    inversionista = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='inversiones_realizadas')
+    oportunidad = models.ForeignKey(OportunidadInversion, on_delete=models.CASCADE, related_name='solicitudes_inversion')
+    monto_propuesto = models.DecimalField(max_digits=12, decimal_places=2)
+    tipo_inversor = models.CharField(max_length=20, choices=TIPO_INVERSOR_CHOICES, default='Nacional')
+    mensaje = models.TextField(blank=True, null=True, help_text="Mensaje o propuesta enviada por el turista/inversionista")
+    telefono_inversor = models.CharField(max_length=20, blank=True, null=True)
+    email_inversor = models.EmailField(blank=True, null=True)
+    estado = models.CharField(max_length=20, choices=ESTADO_CHOICES, default='Pendiente')
+    fecha_solicitud = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Inversión de Turista"
+        verbose_name_plural = "Inversiones de Turistas"
+
+    def __str__(self):
+        return f"Inversión de {self.inversionista.username} en {self.oportunidad.empresa.nombre} (${self.monto_propuesto})"
+
+
+class Evento(models.Model):
+    creador = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='eventos_creados')
+    empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name='eventos', null=True, blank=True)
+    ciudad = models.ForeignKey(Ciudad, on_delete=models.SET_NULL, null=True, blank=True, related_name='eventos')
+    titulo = models.CharField(max_length=200)
+    descripcion = models.TextField()
+    fecha_inicio = models.DateTimeField()
+    fecha_fin = models.DateTimeField(null=True, blank=True)
+    ubicacion = models.CharField(max_length=255, help_text="Dirección o punto del evento")
+    latitud = models.FloatField(null=True, blank=True)
+    longitud = models.FloatField(null=True, blank=True)
+    imagen = models.ImageField(upload_to='eventos/', blank=True, null=True)
+    precio_entrada = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    es_gratuito = models.BooleanField(default=True)
+    cupo_maximo = models.PositiveIntegerField(null=True, blank=True)
+    esta_activo = models.BooleanField(default=True)
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-fecha_inicio']
+        verbose_name = "Evento"
+        verbose_name_plural = "Eventos"
+
+    def __str__(self):
+        return f"{self.titulo} - {self.fecha_inicio.strftime('%Y-%m-%d %H:%M')}"
