@@ -13,7 +13,11 @@ from .views import (
     VisitaViewSet,
     RegisterView,
     LoginView,
-    UserProfileView
+    UserProfileView,
+    EmpresaViewSet,
+    OportunidadInversionViewSet,
+    InversionTuristaViewSet,
+    EventoViewSet
 )
 
 router = DefaultRouter()
@@ -26,6 +30,10 @@ router.register(r'datos-historicos', DatoHistoricoViewSet, basename='datohistori
 router.register(r'galeria-multimedia', GaleriaMultimediaViewSet, basename='galeriamultimedia')
 router.register(r'visitas', VisitaViewSet, basename='visita')
 router.register(r'usuario-puntos-visitados', VisitaViewSet, basename='usuariopuntosvisitados')
+router.register(r'empresas', EmpresaViewSet, basename='empresa')
+router.register(r'oportunidades-inversion', OportunidadInversionViewSet, basename='oportunidadinversion')
+router.register(r'inversiones-turistas', InversionTuristaViewSet, basename='inversionturista')
+router.register(r'eventos', EventoViewSet, basename='evento')
 
 urlpatterns = [
     path('', RedirectView.as_view(url='/api/', permanent=False)),

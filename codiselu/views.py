@@ -1,3 +1,4 @@
+from django.db import models
 from rest_framework import viewsets, permissions, status, generics
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -5,7 +6,8 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.decorators import action
 from .models import (
     User, Ciudad, CircuitoCreativo, PuntoInteres, DatoHistorico,
-    GaleriaMultimedia, UsuarioPuntoVisitado
+    GaleriaMultimedia, UsuarioPuntoVisitado, Empresa, OportunidadInversion,
+    InversionTurista, Evento
 )
 from .serializers import (
     UserSerializer,
@@ -16,7 +18,11 @@ from .serializers import (
     PuntoInteresSerializer,
     DatoHistoricoSerializer,
     GaleriaMultimediaSerializer,
-    UsuarioPuntoVisitadoSerializer
+    UsuarioPuntoVisitadoSerializer,
+    EmpresaSerializer,
+    OportunidadInversionSerializer,
+    InversionTuristaSerializer,
+    EventoSerializer
 )
 
 
@@ -159,4 +165,98 @@ class VisitaViewSet(viewsets.ModelViewSet):
         return Response(ids)
 
 
+class EmpresaViewSet(viewsets.ModelViewSet):
+    """
+    Endpoint para consultar y administrar Empresas y Destinos Turísticos.
+    - Lectura (GET): Pública para cualquier usuario/turista.
+    - Creación / Edición (POST/PUT/DELETE): Requiere autenticación.
+    """
+    queryset = Empresa.objects.all().order_by('-fecha_creacion')
+    serializer_class = EmpresaSerializer
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
 
+    def perform_create(self, serializer):
+        serializer.save(usuario=self.request.user)
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        acepta_inv = self.request.query_params.get('acepta_inversiones')
+        if acepta_inv is not None:
+            if acepta_inv.lower() in ['true', '1']:
+                queryset = queryset.filter(acepta_inversiones=True)
+            elif acepta_inv.lower() in ['false', '0']:
+                queryset = queryset.filter(acepta_inversiones=False)
+        usuario_id = self.request.query_params.get('usuario')
+        if usuario_id:
+            queryset = queryset.filter(usuario_id=usuario_id)
+        ciudad_id = self.request.query_params.get('ciudad')
+        if ciudad_id:
+            queryset = queryset.filter(ciudad_id=ciudad_id)
+        return queryset
+
+
+class OportunidadInversionViewSet(viewsets.ModelViewSet):
+    """
+    Endpoint para oportunidades de inversión publicadas por empresas.
+    Solo muestra y permite crear oportunidades en empresas que aceptan inversión.
+    """
+    queryset = OportunidadInversion.objects.filter(empresa__acepta_inversiones=True, esta_activa=True).order_by('-fecha_publicacion')
+    serializer_class = OportunidadInversionSerializer
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        empresa_id = self.request.query_params.get('empresa')
+        if empresa_id:
+            queryset = queryset.filter(empresa_id=empresa_id)
+        tipo_inversor = self.request.query_params.get('tipo_inversor')
+        if tipo_inversor:
+            queryset = queryset.filter(tipo_inversor_permitido__in=['Todos', tipo_inversor])
+        return queryset
+
+
+class InversionTuristaViewSet(viewsets.ModelViewSet):
+    """
+    Endpoint para registrar e inspeccionar solicitudes de inversión realizadas por turistas.
+    - POST: Permite a turistas autenticados enviar su intención/monto de inversión.
+    - GET: Retorna las inversiones enviadas por el usuario actual o las recibidas por las empresas del usuario protagonista.
+    """
+    serializer_class = InversionTuristaSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        user = self.request.user
+        if user.is_staff:
+            return InversionTurista.objects.all().order_by('-fecha_solicitud')
+        return InversionTurista.objects.filter(
+            models.Q(inversionista=user) | models.Q(oportunidad__empresa__usuario=user)
+        ).distinct().order_by('-fecha_solicitud')
+
+    def perform_create(self, serializer):
+        serializer.save(inversionista=self.request.user)
+
+
+class EventoViewSet(viewsets.ModelViewSet):
+    """
+    Endpoint para consultar y registrar eventos creados por protagonistas o empresas.
+    - GET: Público. Permite filtrar por ciudad, empresa o eventos activos.
+    - POST/PUT/DELETE: Requiere autenticación.
+    """
+    queryset = Evento.objects.filter(esta_activo=True).order_by('-fecha_inicio')
+    serializer_class = EventoSerializer
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+
+    def perform_create(self, serializer):
+        serializer.save(creador=self.request.user)
+
+    def get_queryset(self):
+        queryset = Evento.objects.all().order_by('-fecha_inicio')
+        if not self.request.user.is_staff:
+            queryset = queryset.filter(esta_activo=True)
+        ciudad_id = self.request.query_params.get('ciudad')
+        if ciudad_id:
+            queryset = queryset.filter(ciudad_id=ciudad_id)
+        empresa_id = self.request.query_params.get('empresa')
+        if empresa_id:
+            queryset = queryset.filter(empresa_id=empresa_id)
+        return queryset

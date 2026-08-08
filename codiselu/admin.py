@@ -2,7 +2,8 @@ from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from .models import (
     User, Ciudad, CircuitoCreativo, PuntoInteres, DatoHistorico,
-    GaleriaMultimedia, UsuarioPuntoVisitado
+    GaleriaMultimedia, UsuarioPuntoVisitado, Empresa, OportunidadInversion,
+    InversionTurista, Evento
 )
 
 @admin.register(User)
@@ -70,4 +71,39 @@ class UsuarioPuntoVisitadoAdmin(admin.ModelAdmin):
     list_filter = ('es_validada', 'fecha_visita', 'usuario', 'punto_interes__circuito__ciudad')
     search_fields = ('usuario__username', 'punto_interes__nombre')
     readonly_fields = ('es_validada', 'distancia_metros')
+
+
+class OportunidadInversionInline(admin.TabularInline):
+    model = OportunidadInversion
+    extra = 1
+
+
+@admin.register(Empresa)
+class EmpresaAdmin(admin.ModelAdmin):
+    list_display = ('id', 'nombre', 'usuario', 'categoria', 'ciudad', 'acepta_inversiones', 'fecha_creacion')
+    list_filter = ('acepta_inversiones', 'categoria', 'ciudad')
+    search_fields = ('nombre', 'descripcion', 'usuario__username')
+    inlines = [OportunidadInversionInline]
+
+
+@admin.register(OportunidadInversion)
+class OportunidadInversionAdmin(admin.ModelAdmin):
+    list_display = ('id', 'titulo', 'empresa', 'monto_requerido', 'monto_recaudado', 'tipo_inversor_permitido', 'esta_activa')
+    list_filter = ('esta_activa', 'tipo_inversor_permitido', 'empresa__ciudad')
+    search_fields = ('titulo', 'descripcion', 'empresa__nombre')
+
+
+@admin.register(InversionTurista)
+class InversionTuristaAdmin(admin.ModelAdmin):
+    list_display = ('id', 'inversionista', 'oportunidad', 'monto_propuesto', 'tipo_inversor', 'estado', 'fecha_solicitud')
+    list_filter = ('estado', 'tipo_inversor', 'fecha_solicitud')
+    search_fields = ('inversionista__username', 'oportunidad__titulo', 'oportunidad__empresa__nombre')
+
+
+@admin.register(Evento)
+class EventoAdmin(admin.ModelAdmin):
+    list_display = ('id', 'titulo', 'creador', 'empresa', 'ciudad', 'fecha_inicio', 'precio_entrada', 'es_gratuito', 'esta_activo')
+    list_filter = ('esta_activo', 'es_gratuito', 'ciudad', 'fecha_inicio')
+    search_fields = ('titulo', 'descripcion', 'ubicacion', 'creador__username', 'empresa__nombre')
+
 
