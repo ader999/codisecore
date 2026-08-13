@@ -105,6 +105,7 @@ class GaleriaMultimedia(models.Model):
 
     ciudad = models.ForeignKey(Ciudad, related_name='galeria', on_delete=models.CASCADE, null=True, blank=True)
     punto_interes = models.ForeignKey(PuntoInteres, related_name='galeria', on_delete=models.CASCADE, null=True, blank=True)
+    evento = models.ForeignKey('Evento', related_name='galeria', on_delete=models.CASCADE, null=True, blank=True)
     titulo = models.CharField(max_length=150, blank=True, null=True)
     tipo = models.CharField(max_length=10, choices=TIPO_CHOICES, default='Imagen')
     imagen = models.ImageField(upload_to='galeria/imagenes/', blank=True, null=True)
@@ -115,7 +116,7 @@ class GaleriaMultimedia(models.Model):
         verbose_name_plural = "Galerías Multimedia"
 
     def __str__(self):
-        origen = self.ciudad.nombre if self.ciudad else (self.punto_interes.nombre if self.punto_interes else "General")
+        origen = self.ciudad.nombre if self.ciudad else (self.punto_interes.nombre if self.punto_interes else (self.evento.titulo if self.evento else "General"))
         return f"{self.tipo}: {self.titulo or 'Sin título'} [{origen}]"
 
 
@@ -247,6 +248,7 @@ class Evento(models.Model):
     es_oficial = models.BooleanField(default=False, help_text="Indica si es un evento oficial de la ciudad publicado por administradores")
     dias_previos_mural = models.PositiveIntegerField(default=7, help_text="Días antes de la fecha de inicio en los que el evento aparece en el mural de publicación")
     esta_activo = models.BooleanField(default=True)
+    granos_cafe = models.ManyToManyField(settings.AUTH_USER_MODEL, related_name='eventos_grano_cafe', blank=True)
     fecha_creacion = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -263,7 +265,68 @@ class Evento(models.Model):
             return fecha_visibilidad <= ahora <= self.fecha_fin
         return fecha_visibilidad <= ahora <= (self.fecha_inicio + timezone.timedelta(days=1))
 
+    @property
+    def total_granos_cafe(self):
+        return self.granos_cafe.count()
+
+    @property
+    def total_asistentes(self):
+        return self.asistencias.count()
+
     def __str__(self):
         tipo = "Oficial" if self.es_oficial else "Protagonista"
         return f"[{tipo}] {self.titulo} - {self.fecha_inicio.strftime('%Y-%m-%d %H:%M')}"
+
+
+class EventoAsistencia(models.Model):
+    usuario = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='asistencias_eventos')
+    evento = models.ForeignKey(Evento, on_delete=models.CASCADE, related_name='asistencias')
+    fecha_registro = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        unique_together = ('usuario', 'evento')
+        verbose_name = "Asistencia a Evento"
+        verbose_name_plural = "Asistencias a Eventos"
+
+    def __str__(self):
+        return f"{self.usuario.username} asistirá a {self.evento.titulo}"
+
+
+class Publicacion(models.Model):
+    autor = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='publicaciones')
+    empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, null=True, blank=True, related_name='publicaciones')
+    ciudad = models.ForeignKey(Ciudad, on_delete=models.CASCADE, null=True, blank=True, related_name='publicaciones')
+    evento = models.ForeignKey(Evento, on_delete=models.CASCADE, null=True, blank=True, related_name='publicaciones')
+    titulo = models.CharField(max_length=200, blank=True, null=True)
+    descripcion = models.TextField()
+    imagen_principal = models.ImageField(upload_to='publicaciones/', blank=True, null=True)
+    video_url = models.URLField(blank=True, null=True)
+    likes = models.ManyToManyField(settings.AUTH_USER_MODEL, related_name='publicaciones_dado_like', blank=True)
+    esta_activa = models.BooleanField(default=True)
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-fecha_creacion']
+        verbose_name = "Publicación"
+        verbose_name_plural = "Publicaciones"
+
+    @property
+    def total_likes(self):
+        return self.likes.count()
+
+    def __str__(self):
+        return f"Publicación de {self.autor.username} - {self.fecha_creacion.strftime('%Y-%m-%d')}"
+
+
+class PublicacionImagen(models.Model):
+    publicacion = models.ForeignKey(Publicacion, on_delete=models.CASCADE, related_name='imagenes')
+    imagen = models.ImageField(upload_to='publicaciones/colecciones/')
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Imagen de Publicación"
+        verbose_name_plural = "Imágenes de Publicaciones"
+
+    def __str__(self):
+        return f"Imagen #{self.id} de Publicación {self.publicacion_id}"
 
