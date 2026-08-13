@@ -6,7 +6,7 @@ from django.core.exceptions import ValidationError as DjangoValidationError
 from .models import (
     User, Ciudad, CircuitoCreativo, PuntoInteres, DatoHistorico,
     GaleriaMultimedia, UsuarioPuntoVisitado, Empresa, OportunidadInversion,
-    InversionTurista, Evento
+    InversionTurista, Evento, EventoAsistencia, Publicacion, PublicacionImagen
 )
 
 
@@ -123,7 +123,7 @@ class DatoHistoricoSerializer(serializers.ModelSerializer):
 class GaleriaMultimediaSerializer(serializers.ModelSerializer):
     class Meta:
         model = GaleriaMultimedia
-        fields = ['id', 'ciudad', 'punto_interes', 'titulo', 'tipo', 'imagen', 'video_url']
+        fields = ['id', 'ciudad', 'punto_interes', 'evento', 'titulo', 'tipo', 'imagen', 'video_url']
 
 
 class PuntoInteresSerializer(serializers.ModelSerializer):
@@ -316,11 +316,52 @@ class InversionTuristaSerializer(serializers.ModelSerializer):
         return attrs
 
 
+class PublicacionImagenSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PublicacionImagen
+        fields = ['id', 'imagen', 'fecha_creacion']
+
+
+class PublicacionSerializer(serializers.ModelSerializer):
+    autor_username = serializers.ReadOnlyField(source='autor.username')
+    autor_foto_perfil = serializers.ImageField(source='autor.foto_perfil', read_only=True)
+    es_protagonista = serializers.ReadOnlyField(source='autor.es_protagonista')
+    empresa_nombre = serializers.ReadOnlyField(source='empresa.nombre')
+    ciudad_nombre = serializers.ReadOnlyField(source='ciudad.nombre')
+    evento_titulo = serializers.ReadOnlyField(source='evento.titulo')
+    imagenes = PublicacionImagenSerializer(many=True, read_only=True)
+    total_likes = serializers.ReadOnlyField()
+    user_ha_dado_like = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Publicacion
+        fields = [
+            'id', 'autor', 'autor_username', 'autor_foto_perfil', 'es_protagonista',
+            'empresa', 'empresa_nombre', 'ciudad', 'ciudad_nombre',
+            'evento', 'evento_titulo', 'titulo', 'descripcion',
+            'imagen_principal', 'video_url', 'imagenes', 'total_likes',
+            'user_ha_dado_like', 'esta_activa', 'fecha_creacion'
+        ]
+        read_only_fields = ['id', 'autor', 'autor_username', 'autor_foto_perfil', 'es_protagonista', 'total_likes', 'user_ha_dado_like', 'fecha_creacion']
+
+    def get_user_ha_dado_like(self, obj):
+        request = self.context.get('request')
+        if request and request.user and request.user.is_authenticated:
+            return obj.likes.filter(id=request.user.id).exists()
+        return False
+
+
 class EventoSerializer(serializers.ModelSerializer):
     creador_username = serializers.ReadOnlyField(source='creador.username')
     empresa_nombre = serializers.ReadOnlyField(source='empresa.nombre')
     ciudad_nombre = serializers.ReadOnlyField(source='ciudad.nombre')
     en_mural = serializers.ReadOnlyField()
+    total_granos_cafe = serializers.ReadOnlyField()
+    user_ha_dado_grano_cafe = serializers.SerializerMethodField()
+    total_asistentes = serializers.ReadOnlyField()
+    user_va_a_asistir = serializers.SerializerMethodField()
+    galeria = GaleriaMultimediaSerializer(many=True, read_only=True)
+    publicaciones = PublicacionSerializer(many=True, read_only=True)
 
     class Meta:
         model = Evento
@@ -329,7 +370,24 @@ class EventoSerializer(serializers.ModelSerializer):
             'ciudad', 'ciudad_nombre', 'titulo', 'descripcion', 'fecha_inicio',
             'fecha_fin', 'ubicacion', 'latitud', 'longitud', 'imagen',
             'precio_entrada', 'es_gratuito', 'cupo_maximo', 'es_oficial',
-            'dias_previos_mural', 'en_mural', 'esta_activo', 'fecha_creacion'
+            'dias_previos_mural', 'en_mural', 'esta_activo', 'total_granos_cafe',
+            'user_ha_dado_grano_cafe', 'total_asistentes', 'user_va_a_asistir',
+            'galeria', 'publicaciones', 'fecha_creacion'
         ]
-        read_only_fields = ['id', 'creador', 'creador_username', 'en_mural', 'fecha_creacion']
+        read_only_fields = [
+            'id', 'creador', 'creador_username', 'en_mural', 'total_granos_cafe',
+            'user_ha_dado_grano_cafe', 'total_asistentes', 'user_va_a_asistir', 'fecha_creacion'
+        ]
+
+    def get_user_ha_dado_grano_cafe(self, obj):
+        request = self.context.get('request')
+        if request and request.user and request.user.is_authenticated:
+            return obj.granos_cafe.filter(id=request.user.id).exists()
+        return False
+
+    def get_user_va_a_asistir(self, obj):
+        request = self.context.get('request')
+        if request and request.user and request.user.is_authenticated:
+            return obj.asistencias.filter(usuario=request.user).exists()
+        return False
 

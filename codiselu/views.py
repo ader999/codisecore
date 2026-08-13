@@ -7,7 +7,7 @@ from rest_framework.decorators import action
 from .models import (
     User, Ciudad, CircuitoCreativo, PuntoInteres, DatoHistorico,
     GaleriaMultimedia, UsuarioPuntoVisitado, Empresa, OportunidadInversion,
-    InversionTurista, Evento
+    InversionTurista, Evento, EventoAsistencia, Publicacion, PublicacionImagen
 )
 from .serializers import (
     UserSerializer,
@@ -22,7 +22,9 @@ from .serializers import (
     EmpresaSerializer,
     OportunidadInversionSerializer,
     InversionTuristaSerializer,
-    EventoSerializer
+    EventoSerializer,
+    PublicacionSerializer,
+    PublicacionImagenSerializer
 )
 
 
@@ -283,4 +285,111 @@ class EventoViewSet(viewsets.ModelViewSet):
             queryset = queryset.filter(id__in=mural_ids)
 
         return queryset
+
+    @action(detail=True, methods=['post'], permission_classes=[permissions.IsAuthenticated], url_path='grano-cafe')
+    def grano_cafe(self, request, pk=None):
+        """
+        Endpoint para alternar (toggle) la reacción de grano de café en un evento.
+        POST /api/eventos/{id}/grano-cafe/
+        """
+        evento = self.get_object()
+        user = request.user
+        if evento.granos_cafe.filter(id=user.id).exists():
+            evento.granos_cafe.remove(user)
+            ha_dado_grano = False
+            mensaje = "Reacción de grano de café eliminada del evento."
+        else:
+            evento.granos_cafe.add(user)
+            ha_dado_grano = True
+            mensaje = "Reacción de grano de café agregada al evento."
+        return Response({
+            'message': mensaje,
+            'ha_dado_grano_cafe': ha_dado_grano,
+            'total_granos_cafe': evento.total_granos_cafe
+        }, status=status.HTTP_200_OK)
+
+    @action(detail=True, methods=['post'], permission_classes=[permissions.IsAuthenticated], url_path='asistir')
+    def asistir(self, request, pk=None):
+        """
+        Endpoint para alternar (toggle) la asistencia a un evento.
+        POST /api/eventos/{id}/asistir/
+        """
+        evento = self.get_object()
+        user = request.user
+        asistencia, created = EventoAsistencia.objects.get_or_create(usuario=user, evento=evento)
+        if not created:
+            asistencia.delete()
+            va_a_asistir = False
+            mensaje = "Has cancelado tu asistencia al evento."
+        else:
+            va_a_asistir = True
+            mensaje = "Has registrado tu asistencia al evento."
+        return Response({
+            'message': mensaje,
+            'va_a_asistir': va_a_asistir,
+            'total_asistentes': evento.total_asistentes
+        }, status=status.HTTP_200_OK)
+
+
+class PublicacionViewSet(viewsets.ModelViewSet):
+    """
+    Endpoint para consultar y crear publicaciones de turistas y protagonistas/empresas.
+    - Soporta la subida de múltiples imágenes secundarias mediante el parámetro FILES 'imagenes'.
+    - Reacción de me gusta mediante POST /api/publicaciones/{id}/like/
+    """
+    queryset = Publicacion.objects.filter(esta_activa=True).order_by('-fecha_creacion')
+    serializer_class = PublicacionSerializer
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+
+    def perform_create(self, serializer):
+        publicacion = serializer.save(autor=self.request.user)
+        imagenes = self.request.FILES.getlist('imagenes')
+        for img in imagenes:
+            PublicacionImagen.objects.create(publicacion=publicacion, imagen=img)
+
+    def get_queryset(self):
+        queryset = Publicacion.objects.all().order_by('-fecha_creacion')
+        if not (self.request.user and self.request.user.is_staff):
+            queryset = queryset.filter(esta_activa=True)
+
+        ciudad_id = self.request.query_params.get('ciudad')
+        if ciudad_id:
+            queryset = queryset.filter(ciudad_id=ciudad_id)
+
+        empresa_id = self.request.query_params.get('empresa')
+        if empresa_id:
+            queryset = queryset.filter(empresa_id=empresa_id)
+
+        evento_id = self.request.query_params.get('evento')
+        if evento_id:
+            queryset = queryset.filter(evento_id=evento_id)
+
+        autor_id = self.request.query_params.get('autor')
+        if autor_id:
+            queryset = queryset.filter(autor_id=autor_id)
+
+        return queryset
+
+    @action(detail=True, methods=['post'], permission_classes=[permissions.IsAuthenticated], url_path='like')
+    def toggle_like(self, request, pk=None):
+        """
+        Endpoint para alternar (toggle) el like en una publicación.
+        POST /api/publicaciones/{id}/like/
+        """
+        publicacion = self.get_object()
+        user = request.user
+        if publicacion.likes.filter(id=user.id).exists():
+            publicacion.likes.remove(user)
+            ha_dado_like = False
+            mensaje = "Like eliminado de la publicación."
+        else:
+            publicacion.likes.add(user)
+            ha_dado_like = True
+            mensaje = "Like agregado a la publicación."
+        return Response({
+            'message': mensaje,
+            'ha_dado_like': ha_dado_like,
+            'total_likes': publicacion.total_likes
+        }, status=status.HTTP_200_OK)
+
 

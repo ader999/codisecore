@@ -3,7 +3,7 @@ from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from .models import (
     User, Ciudad, CircuitoCreativo, PuntoInteres, DatoHistorico,
     GaleriaMultimedia, UsuarioPuntoVisitado, Empresa, OportunidadInversion,
-    InversionTurista, Evento
+    InversionTurista, Evento, EventoAsistencia, Publicacion, PublicacionImagen
 )
 
 @admin.register(User)
@@ -61,8 +61,8 @@ class DatoHistoricoAdmin(admin.ModelAdmin):
 
 @admin.register(GaleriaMultimedia)
 class GaleriaMultimediaAdmin(admin.ModelAdmin):
-    list_display = ('titulo', 'tipo', 'ciudad', 'punto_interes')
-    list_filter = ('tipo', 'ciudad')
+    list_display = ('titulo', 'tipo', 'ciudad', 'punto_interes', 'evento')
+    list_filter = ('tipo', 'ciudad', 'evento')
 
 
 @admin.register(UsuarioPuntoVisitado)
@@ -100,11 +100,38 @@ class InversionTuristaAdmin(admin.ModelAdmin):
     search_fields = ('inversionista__username', 'oportunidad__titulo', 'oportunidad__empresa__nombre')
 
 
+class EventoAsistenciaInline(admin.TabularInline):
+    model = EventoAsistencia
+    extra = 0
+
+
 @admin.register(Evento)
 class EventoAdmin(admin.ModelAdmin):
-    list_display = ('id', 'titulo', 'creador', 'empresa', 'ciudad', 'fecha_inicio', 'es_oficial', 'dias_previos_mural', 'precio_entrada', 'es_gratuito', 'esta_activo')
+    list_display = ('id', 'titulo', 'creador', 'empresa', 'ciudad', 'fecha_inicio', 'total_granos_cafe', 'total_asistentes', 'es_oficial', 'esta_activo')
     list_filter = ('es_oficial', 'esta_activo', 'es_gratuito', 'ciudad', 'fecha_inicio')
     search_fields = ('titulo', 'descripcion', 'ubicacion', 'creador__username', 'empresa__nombre')
+    inlines = [GaleriaMultimediaInline, EventoAsistenciaInline]
+
+
+@admin.register(EventoAsistencia)
+class EventoAsistenciaAdmin(admin.ModelAdmin):
+    list_display = ('id', 'usuario', 'evento', 'fecha_registro')
+    list_filter = ('fecha_registro', 'evento')
+    search_fields = ('usuario__username', 'evento__titulo')
+
+
+class PublicacionImagenInline(admin.TabularInline):
+    model = PublicacionImagen
+    extra = 1
+
+
+@admin.register(Publicacion)
+class PublicacionAdmin(admin.ModelAdmin):
+    list_display = ('id', 'autor', 'titulo', 'empresa', 'ciudad', 'evento', 'total_likes', 'esta_activa', 'fecha_creacion')
+    list_filter = ('esta_activa', 'ciudad', 'fecha_creacion')
+    search_fields = ('titulo', 'descripcion', 'autor__username', 'empresa__nombre')
+    inlines = [PublicacionImagenInline]
+
 
 
 
