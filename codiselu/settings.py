@@ -238,3 +238,15 @@ SIMPLE_JWT = {
     'AUTH_HEADER_TYPES': ('Bearer',),
 }
 
+
+# File and Data Upload Limits (Supports multi-image post uploads)
+# DATA_UPLOAD_MAX_MEMORY_SIZE: Max size in bytes for total request body (default: 50MB, overridable via env)
+DATA_UPLOAD_MAX_MEMORY_SIZE = int(os.environ.get('DATA_UPLOAD_MAX_MEMORY_SIZE', 52428800))  # 50 MB
+
+# FILE_UPLOAD_MAX_MEMORY_SIZE: Max size in bytes per file kept in memory before streaming to disk (default: 25MB, overridable via env)
+FILE_UPLOAD_MAX_MEMORY_SIZE = int(os.environ.get('FILE_UPLOAD_MAX_MEMORY_SIZE', 26214400))  # 25 MB
+
+# DATA_UPLOAD_MAX_NUMBER_FIELDS: Maximum number of fields in request body
+DATA_UPLOAD_MAX_NUMBER_FIELDS = int(os.environ.get('DATA_UPLOAD_MAX_NUMBER_FIELDS', 2000))
+
+
