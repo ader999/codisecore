@@ -35,4 +35,4 @@ RUN mkdir -p /app/staticfiles /app/media && \
 EXPOSE 8000
 
 ENTRYPOINT ["/entrypoint.sh"]
-CMD ["gunicorn", "codiselu.wsgi:application", "--bind", "0.0.0.0:8000", "--workers", "4", "--timeout", "120"]
+CMD ["gunicorn", "codiselu.wsgi:application", "--bind", "0.0.0.0:8000", "--workers", "4", "--timeout", "300"]
