@@ -3,7 +3,8 @@ from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from .models import (
     User, Ciudad, CircuitoCreativo, PuntoInteres, DatoHistorico,
     GaleriaMultimedia, UsuarioPuntoVisitado, Empresa, OportunidadInversion,
-    InversionTurista, Evento, EventoAsistencia, Publicacion, PublicacionImagen
+    InversionTurista, Evento, EventoAsistencia, Publicacion, PublicacionImagen,
+    ComentarioPublicacion
 )
 
 @admin.register(User)
@@ -125,12 +126,25 @@ class PublicacionImagenInline(admin.TabularInline):
     extra = 1
 
 
+class ComentarioPublicacionInline(admin.TabularInline):
+    model = ComentarioPublicacion
+    extra = 1
+
+
 @admin.register(Publicacion)
 class PublicacionAdmin(admin.ModelAdmin):
-    list_display = ('id', 'autor', 'titulo', 'empresa', 'ciudad', 'evento', 'total_likes', 'esta_activa', 'fecha_creacion')
+    list_display = ('id', 'autor', 'titulo', 'empresa', 'ciudad', 'evento', 'total_likes', 'total_comentarios', 'esta_activa', 'fecha_creacion')
     list_filter = ('esta_activa', 'ciudad', 'fecha_creacion')
     search_fields = ('titulo', 'descripcion', 'autor__username', 'empresa__nombre')
-    inlines = [PublicacionImagenInline]
+    inlines = [PublicacionImagenInline, ComentarioPublicacionInline]
+
+
+@admin.register(ComentarioPublicacion)
+class ComentarioPublicacionAdmin(admin.ModelAdmin):
+    list_display = ('id', 'autor', 'publicacion', 'contenido', 'esta_activo', 'fecha_creacion')
+    list_filter = ('esta_activo', 'fecha_creacion')
+    search_fields = ('contenido', 'autor__username', 'publicacion__titulo')
+
 
 
 

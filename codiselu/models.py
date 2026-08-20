@@ -314,6 +314,10 @@ class Publicacion(models.Model):
     def total_likes(self):
         return self.likes.count()
 
+    @property
+    def total_comentarios(self):
+        return self.comentarios.filter(esta_activo=True).count()
+
     def __str__(self):
         return f"Publicación de {self.autor.username} - {self.fecha_creacion.strftime('%Y-%m-%d')}"
 
@@ -329,4 +333,21 @@ class PublicacionImagen(models.Model):
 
     def __str__(self):
         return f"Imagen #{self.id} de Publicación {self.publicacion_id}"
+
+
+class ComentarioPublicacion(models.Model):
+    publicacion = models.ForeignKey(Publicacion, on_delete=models.CASCADE, related_name='comentarios')
+    autor = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='comentarios_publicaciones')
+    contenido = models.TextField()
+    esta_activo = models.BooleanField(default=True)
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['fecha_creacion']
+        verbose_name = "Comentario de Publicación"
+        verbose_name_plural = "Comentarios de Publicaciones"
+
+    def __str__(self):
+        return f"Comentario de {self.autor.username} en Publicación #{self.publicacion_id}"
+
 
