@@ -7,7 +7,8 @@ from rest_framework.decorators import action
 from .models import (
     User, Ciudad, CircuitoCreativo, PuntoInteres, DatoHistorico,
     GaleriaMultimedia, UsuarioPuntoVisitado, Empresa, OportunidadInversion,
-    InversionTurista, Evento, EventoAsistencia, Publicacion, PublicacionImagen
+    InversionTurista, Evento, EventoAsistencia, Publicacion, PublicacionImagen,
+    ComentarioPublicacion
 )
 from .serializers import (
     UserSerializer,
@@ -24,8 +25,20 @@ from .serializers import (
     InversionTuristaSerializer,
     EventoSerializer,
     PublicacionSerializer,
-    PublicacionImagenSerializer
+    PublicacionImagenSerializer,
+    ComentarioPublicacionSerializer
 )
+
+
+class IsAutorOrReadOnly(permissions.BasePermission):
+    """
+    Permiso personalizado que solo permite al autor del objeto (o a un administrador) modificarlo o eliminarlo.
+    """
+    def has_object_permission(self, request, view, obj):
+        if request.method in permissions.SAFE_METHODS:
+            return True
+        return hasattr(obj, 'autor') and (obj.autor == request.user or (request.user and request.user.is_staff))
+
 
 
 class RegisterView(generics.CreateAPIView):
@@ -391,5 +404,58 @@ class PublicacionViewSet(viewsets.ModelViewSet):
             'ha_dado_like': ha_dado_like,
             'total_likes': publicacion.total_likes
         }, status=status.HTTP_200_OK)
+
+    @action(detail=True, methods=['get', 'post'], permission_classes=[permissions.IsAuthenticatedOrReadOnly], url_path='comentarios')
+    def comentarios(self, request, pk=None):
+        """
+        Endpoint para listar (GET) y agregar (POST) comentarios a una publicación específica.
+        GET /api/publicaciones/{id}/comentarios/
+        POST /api/publicaciones/{id}/comentarios/ -> {'contenido': 'Texto del comentario'}
+        """
+        publicacion = self.get_object()
+
+        if request.method == 'GET':
+            comentarios = publicacion.comentarios.filter(esta_activo=True).order_by('fecha_creacion')
+            serializer = ComentarioPublicacionSerializer(comentarios, many=True, context={'request': request})
+            return Response(serializer.data, status=status.HTTP_200_OK)
+
+        elif request.method == 'POST':
+            if not request.user or not request.user.is_authenticated:
+                return Response({'detail': 'Las credenciales de autenticación no se proveyeron.'}, status=status.HTTP_401_UNAUTHORIZED)
+            
+            serializer = ComentarioPublicacionSerializer(data=request.data, context={'request': request})
+            if serializer.is_valid():
+                serializer.save(autor=request.user, publicacion=publicacion)
+                return Response(serializer.data, status=status.HTTP_201_CREATED)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class ComentarioPublicacionViewSet(viewsets.ModelViewSet):
+    """
+    Endpoint CRUD para gestionar comentarios en publicaciones.
+    - GET /api/comentarios-publicaciones/?publicacion={publicacion_id}
+    - POST /api/comentarios-publicaciones/
+    - PUT /api/comentarios-publicaciones/{id}/
+    - PATCH /api/comentarios-publicaciones/{id}/
+    - DELETE /api/comentarios-publicaciones/{id}/
+    """
+    queryset = ComentarioPublicacion.objects.filter(esta_activo=True).order_by('fecha_creacion')
+    serializer_class = ComentarioPublicacionSerializer
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly, IsAutorOrReadOnly]
+
+    def perform_create(self, serializer):
+        serializer.save(autor=self.request.user)
+
+    def get_queryset(self):
+        queryset = ComentarioPublicacion.objects.all().order_by('fecha_creacion')
+        if not (self.request.user and self.request.user.is_staff):
+            queryset = queryset.filter(esta_activo=True)
+
+        publicacion_id = self.request.query_params.get('publicacion')
+        if publicacion_id:
+            queryset = queryset.filter(publicacion_id=publicacion_id)
+
+        return queryset
+
 
 

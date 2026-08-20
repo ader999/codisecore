@@ -6,7 +6,8 @@ from django.core.exceptions import ValidationError as DjangoValidationError
 from .models import (
     User, Ciudad, CircuitoCreativo, PuntoInteres, DatoHistorico,
     GaleriaMultimedia, UsuarioPuntoVisitado, Empresa, OportunidadInversion,
-    InversionTurista, Evento, EventoAsistencia, Publicacion, PublicacionImagen
+    InversionTurista, Evento, EventoAsistencia, Publicacion, PublicacionImagen,
+    ComentarioPublicacion
 )
 
 
@@ -322,6 +323,17 @@ class PublicacionImagenSerializer(serializers.ModelSerializer):
         fields = ['id', 'imagen', 'fecha_creacion']
 
 
+class ComentarioPublicacionSerializer(serializers.ModelSerializer):
+    autor_username = serializers.ReadOnlyField(source='autor.username')
+    autor_foto_perfil = serializers.ImageField(source='autor.foto_perfil', read_only=True)
+    publicacion = serializers.PrimaryKeyRelatedField(queryset=Publicacion.objects.all(), required=False)
+
+    class Meta:
+        model = ComentarioPublicacion
+        fields = ['id', 'publicacion', 'autor', 'autor_username', 'autor_foto_perfil', 'contenido', 'esta_activo', 'fecha_creacion']
+        read_only_fields = ['id', 'autor', 'autor_username', 'autor_foto_perfil', 'fecha_creacion']
+
+
 class PublicacionSerializer(serializers.ModelSerializer):
     autor_username = serializers.ReadOnlyField(source='autor.username')
     autor_foto_perfil = serializers.ImageField(source='autor.foto_perfil', read_only=True)
@@ -332,6 +344,8 @@ class PublicacionSerializer(serializers.ModelSerializer):
     imagenes = PublicacionImagenSerializer(many=True, read_only=True)
     total_likes = serializers.ReadOnlyField()
     user_ha_dado_like = serializers.SerializerMethodField()
+    total_comentarios = serializers.ReadOnlyField()
+    comentarios = ComentarioPublicacionSerializer(many=True, read_only=True)
 
     class Meta:
         model = Publicacion
@@ -340,9 +354,12 @@ class PublicacionSerializer(serializers.ModelSerializer):
             'empresa', 'empresa_nombre', 'ciudad', 'ciudad_nombre',
             'evento', 'evento_titulo', 'titulo', 'descripcion',
             'imagen_principal', 'video_url', 'imagenes', 'total_likes',
-            'user_ha_dado_like', 'esta_activa', 'fecha_creacion'
+            'user_ha_dado_like', 'total_comentarios', 'comentarios', 'esta_activa', 'fecha_creacion'
         ]
-        read_only_fields = ['id', 'autor', 'autor_username', 'autor_foto_perfil', 'es_protagonista', 'total_likes', 'user_ha_dado_like', 'fecha_creacion']
+        read_only_fields = [
+            'id', 'autor', 'autor_username', 'autor_foto_perfil', 'es_protagonista',
+            'total_likes', 'user_ha_dado_like', 'total_comentarios', 'comentarios', 'fecha_creacion'
+        ]
 
     def get_user_ha_dado_like(self, obj):
         request = self.context.get('request')
