@@ -199,13 +199,15 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // 9. Detección de Hash en URL (ej: #terminos, #privacidad, #playstore, #apk)
+  // 9. Detección de Hash y Ruta en URL (ej: /terminos/, /privacidad/, #terminos, #privacidad)
   function checkUrlHash() {
     const hash = window.location.hash.toLowerCase();
-    if (hash === '#terminos') {
+    const path = window.location.pathname.toLowerCase();
+
+    if (hash === '#terminos' || hash === '#condiciones' || path.startsWith('/terminos')) {
       openModal('legalModal');
       switchLegalTab('terminosApp');
-    } else if (hash === '#privacidad') {
+    } else if (hash === '#privacidad' || hash === '#uso' || path.startsWith('/privacidad')) {
       openModal('legalModal');
       switchLegalTab('privacidadApp');
     } else if (hash === '#playstore' || hash === '#descarga-playstore') {
