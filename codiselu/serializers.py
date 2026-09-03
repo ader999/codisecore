@@ -1,4 +1,10 @@
 import math
+import re
+import requests
+from google.oauth2 import id_token as google_id_token
+from google.auth.transport import requests as google_requests
+from django.conf import settings
+from django.core.files.base import ContentFile
 from rest_framework import serializers
 from django.contrib.auth import authenticate
 from django.contrib.auth.password_validation import validate_password
@@ -112,6 +118,181 @@ class LoginSerializer(serializers.Serializer):
             raise serializers.ValidationError("Esta cuenta de usuario está desactivada.")
 
         attrs['user'] = user
+        return attrs
+
+
+class GoogleAuthSerializer(serializers.Serializer):
+    """
+    Serializer para autenticar usuarios mediante Google Sign-In / OAuth 2.0.
+    Acepta 'id_token' / 'credential' (Google Identity Services) o 'code' (OAuth2 Authorization Code).
+    """
+    id_token = serializers.CharField(required=False, allow_blank=True, help_text="Google ID Token o Credencial de Google Identity Services")
+    credential = serializers.CharField(required=False, allow_blank=True, help_text="Alias para id_token emitido por @react-oauth/google")
+    code = serializers.CharField(required=False, allow_blank=True, help_text="Código de autorización OAuth2 de Google")
+    access_token = serializers.CharField(required=False, allow_blank=True, help_text="Access token de Google OAuth2")
+    redirect_uri = serializers.CharField(required=False, allow_blank=True, help_text="URI de redireccionamiento (requerido si se envía code)")
+
+    def validate(self, attrs):
+        raw_token = attrs.get('id_token') or attrs.get('credential')
+        code = attrs.get('code')
+        access_token = attrs.get('access_token')
+        redirect_uri = attrs.get('redirect_uri') or getattr(settings, 'GOOGLE_REDIRECT_URI', '')
+
+        if not raw_token and not code and not access_token:
+            raise serializers.ValidationError(
+                "Debe proporcionar al menos un 'id_token' (o 'credential'), 'code' o 'access_token'."
+            )
+
+        google_user_info = None
+
+        # 1. Validar ID Token / Credential (Flujo Web / Frontend / Mobile recomendado)
+        if raw_token:
+            client_id = getattr(settings, 'GOOGLE_CLIENT_ID', '') or None
+            try:
+                # Verificamos la firma criptográfica y expiración con los certificados de Google
+                id_info = google_id_token.verify_oauth2_token(
+                    raw_token,
+                    google_requests.Request(),
+                    audience=client_id if client_id else None
+                )
+                google_user_info = {
+                    'email': id_info.get('email'),
+                    'first_name': id_info.get('given_name') or (id_info.get('name', '').split(' ')[0] if id_info.get('name') else ''),
+                    'last_name': id_info.get('family_name') or '',
+                    'picture': id_info.get('picture'),
+                    'email_verified': id_info.get('email_verified', True)
+                }
+            except Exception as e:
+                raise serializers.ValidationError(f"El token de Google no es válido o ha expirado: {str(e)}")
+
+        # 2. Canjear Authorization Code (Flujo OAuth2 Server-side)
+        elif code:
+            client_id = getattr(settings, 'GOOGLE_CLIENT_ID', '')
+            client_secret = getattr(settings, 'GOOGLE_CLIENT_SECRET', '')
+            if not client_id or not client_secret:
+                raise serializers.ValidationError(
+                    "GOOGLE_CLIENT_ID y GOOGLE_CLIENT_SECRET deben estar configurados en el servidor para canjear códigos de autorización."
+                )
+
+            token_url = "https://oauth2.googleapis.com/token"
+            token_payload = {
+                'code': code,
+                'client_id': client_id,
+                'client_secret': client_secret,
+                'redirect_uri': redirect_uri,
+                'grant_type': 'authorization_code',
+            }
+            try:
+                resp = requests.post(token_url, data=token_payload, timeout=10)
+                token_data = resp.json()
+            except Exception as e:
+                raise serializers.ValidationError(f"Error conectando con los servidores de Google: {str(e)}")
+
+            if resp.status_code != 200 or 'access_token' not in token_data:
+                err_desc = token_data.get('error_description') or token_data.get('error') or resp.text
+                raise serializers.ValidationError(f"Google rechazó el código de autorización: {err_desc}")
+
+            # Consultar perfil de usuario con el access_token obtenido de Google
+            userinfo_url = "https://www.googleapis.com/oauth2/v3/userinfo"
+            try:
+                userinfo_resp = requests.get(
+                    userinfo_url,
+                    headers={'Authorization': f"Bearer {token_data['access_token']}"},
+                    timeout=10
+                )
+                if userinfo_resp.status_code != 200:
+                    raise serializers.ValidationError("No se pudo obtener la información de perfil de Google.")
+                u_info = userinfo_resp.json()
+            except Exception as e:
+                raise serializers.ValidationError(f"Error al obtener perfil desde Google: {str(e)}")
+
+            google_user_info = {
+                'email': u_info.get('email'),
+                'first_name': u_info.get('given_name') or (u_info.get('name', '').split(' ')[0] if u_info.get('name') else ''),
+                'last_name': u_info.get('family_name') or '',
+                'picture': u_info.get('picture'),
+                'email_verified': u_info.get('email_verified', True)
+            }
+
+        # 3. Validar con Access Token directo
+        elif access_token:
+            userinfo_url = "https://www.googleapis.com/oauth2/v3/userinfo"
+            try:
+                userinfo_resp = requests.get(
+                    userinfo_url,
+                    headers={'Authorization': f"Bearer {access_token}"},
+                    timeout=10
+                )
+            except Exception as e:
+                raise serializers.ValidationError(f"Error consultando perfil en Google: {str(e)}")
+
+            if userinfo_resp.status_code != 200:
+                raise serializers.ValidationError("Access token de Google inválido o expirado.")
+
+            u_info = userinfo_resp.json()
+            google_user_info = {
+                'email': u_info.get('email'),
+                'first_name': u_info.get('given_name') or (u_info.get('name', '').split(' ')[0] if u_info.get('name') else ''),
+                'last_name': u_info.get('family_name') or '',
+                'picture': u_info.get('picture'),
+                'email_verified': u_info.get('email_verified', True)
+            }
+
+        email = google_user_info.get('email')
+        if not email:
+            raise serializers.ValidationError("La cuenta de Google no proporcionó un correo electrónico.")
+
+        # Buscar usuario existente o crear uno nuevo
+        user = User.objects.filter(email__iexact=email).first()
+        is_new_user = False
+
+        if user:
+            if not user.is_active:
+                raise serializers.ValidationError("Esta cuenta de usuario se encuentra desactivada.")
+            updated = False
+            if not user.first_name and google_user_info.get('first_name'):
+                user.first_name = google_user_info['first_name']
+                updated = True
+            if not user.last_name and google_user_info.get('last_name'):
+                user.last_name = google_user_info['last_name']
+                updated = True
+            if updated:
+                user.save()
+        else:
+            # Generar username único
+            base_username = re.sub(r'[^a-zA-Z0-9_]', '', email.split('@')[0])
+            if not base_username:
+                base_username = "usuario_google"
+            
+            username = base_username
+            counter = 1
+            while User.objects.filter(username__iexact=username).exists():
+                username = f"{base_username}_{counter}"
+                counter += 1
+
+            user = User(
+                username=username,
+                email=email,
+                first_name=google_user_info.get('first_name', ''),
+                last_name=google_user_info.get('last_name', ''),
+                es_turista=True,
+            )
+            user.set_unusable_password()
+            user.save()
+            is_new_user = True
+
+        # Descargar foto de perfil de Google si el usuario no tiene una
+        picture_url = google_user_info.get('picture')
+        if picture_url and not user.foto_perfil:
+            try:
+                pic_resp = requests.get(picture_url, timeout=5)
+                if pic_resp.status_code == 200:
+                    user.foto_perfil.save(f"google_avatar_{user.id}.jpg", ContentFile(pic_resp.content), save=True)
+            except Exception:
+                pass
+
+        attrs['user'] = user
+        attrs['is_new_user'] = is_new_user
         return attrs
 
 

@@ -11,5 +11,7 @@ dependencies = [
     "gunicorn>=23.0.0",
     "python-dotenv>=1.0.0",
     "whitenoise>=6.0.0",
-    "django-storages[boto3]>=1.14"
+    "django-storages[boto3]>=1.14",
+    "google-auth>=2.27.0",
+    "requests>=2.31.0"
 ]

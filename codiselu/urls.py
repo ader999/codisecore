@@ -13,6 +13,9 @@ from .views import (
     VisitaViewSet,
     RegisterView,
     LoginView,
+    GoogleAuthView,
+    GoogleLoginUrlView,
+    GoogleAuthCallbackView,
     UserProfileView,
     EmpresaViewSet,
     OportunidadInversionViewSet,
@@ -46,9 +49,14 @@ urlpatterns = [
     path('api/auth/login/', LoginView.as_view(), name='auth_login'),
     path('api/auth/me/', UserProfileView.as_view(), name='auth_me'),
     path('api/auth/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+    # Endpoints Google Auth
+    path('api/auth/google/', GoogleAuthView.as_view(), name='auth_google'),
+    path('api/auth/google/url/', GoogleLoginUrlView.as_view(), name='auth_google_url'),
+    path('api/auth/google/callback/', GoogleAuthCallbackView.as_view(), name='auth_google_callback'),
     # Accesos directos alternativos
     path('api/register/', RegisterView.as_view(), name='register'),
     path('api/login/', LoginView.as_view(), name='login'),
+    path('api/google/', GoogleAuthView.as_view(), name='google_auth_direct'),
     path('api/', include(router.urls)),
 ]
 
