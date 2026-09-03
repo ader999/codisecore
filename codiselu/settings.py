@@ -96,7 +96,14 @@ except ImportError:
 
 DATABASE_URL = os.environ.get('DATABASE_URL')
 
-if DATABASE_URL:
+if os.environ.get('USE_SQLITE', 'false').lower() in ('true', '1', 'yes'):
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
+    }
+elif DATABASE_URL:
     url = urllib.parse.urlparse(DATABASE_URL)
     DATABASES = {
         'default': {
@@ -106,13 +113,6 @@ if DATABASE_URL:
             'PASSWORD': url.password,
             'HOST': url.hostname,
             'PORT': str(url.port or 5432),
-        }
-    }
-elif os.environ.get('USE_SQLITE', 'false').lower() in ('true', '1', 'yes'):
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': BASE_DIR / 'db.sqlite3',
         }
     }
 else:

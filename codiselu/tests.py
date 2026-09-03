@@ -2,7 +2,7 @@ from unittest.mock import patch
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
-from codiselu.models import User
+from codiselu.models import User, Ciudad, CircuitoCreativo
 
 
 class AuthEndpointsTests(APITestCase):
@@ -758,6 +758,87 @@ class GoogleAuthEndpointsTests(APITestCase):
         response = self.client.get(self.google_callback_url)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn('error', response.data)
+
+
+class TraduccionEndpointsTests(APITestCase):
+
+    def setUp(self):
+        self.ciudad = Ciudad.objects.create(
+            nombre="Granada Colonial",
+            nombre_en="Colonial Granada",
+            nombre_zh="殖民地格拉纳达",
+            descripcion="Hermosa ciudad colonial a orillas del Gran Lago de Nicaragua.",
+            descripcion_en="Beautiful colonial city on the shores of the Great Lake of Nicaragua.",
+            descripcion_zh="尼加拉瓜大湖畔美丽的殖民城市。",
+            latitud_centro=11.9299,
+            longitud_centro=-85.9560
+        )
+        self.circuito = CircuitoCreativo.objects.create(
+            ciudad=self.ciudad,
+            nombre="Ruta de las Casonas",
+            nombre_en="Mansions Route",
+            nombre_zh="豪宅路线",
+            descripcion="Recorrido histórico por las casonas coloniales de Granada.",
+            descripcion_en="Historical tour of Granada's colonial mansions.",
+            descripcion_zh="格拉纳达殖民时期豪宅的历史之旅。",
+            distancia_km=2.5,
+            duracion_estimada="1.5 horas",
+            dificultad="Baja"
+        )
+        self.ciudades_url = reverse('ciudad-list')
+        self.circuitos_url = reverse('circuitocreativo-list')
+
+    def _extract_items(self, response_data):
+        if isinstance(response_data, dict) and 'results' in response_data:
+            return response_data['results']
+        return response_data
+
+    def test_traduccion_via_accept_language_en(self):
+        response = self.client.get(self.ciudades_url, HTTP_ACCEPT_LANGUAGE='en')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        ciudades = self._extract_items(response.data)
+        granada = next((c for c in ciudades if c['id'] == self.ciudad.id), None)
+        self.assertIsNotNone(granada)
+        self.assertEqual(granada['nombre'], "Colonial Granada")
+        self.assertEqual(granada['descripcion'], "Beautiful colonial city on the shores of the Great Lake of Nicaragua.")
+
+    def test_traduccion_via_accept_language_zh(self):
+        response = self.client.get(self.ciudades_url, HTTP_ACCEPT_LANGUAGE='zh-CN')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        ciudades = self._extract_items(response.data)
+        granada = next((c for c in ciudades if c['id'] == self.ciudad.id), None)
+        self.assertIsNotNone(granada)
+        self.assertEqual(granada['nombre'], "殖民地格拉纳达")
+        self.assertEqual(granada['descripcion'], "尼加拉瓜大湖畔美丽的殖民城市。")
+
+    def test_traduccion_via_query_param(self):
+        response = self.client.get(f"{self.ciudades_url}?lang=en")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        ciudades = self._extract_items(response.data)
+        granada = next((c for c in ciudades if c['id'] == self.ciudad.id), None)
+        self.assertIsNotNone(granada)
+        self.assertEqual(granada['nombre'], "Colonial Granada")
+
+    def test_fallback_espanol(self):
+        response = self.client.get(self.ciudades_url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        ciudades = self._extract_items(response.data)
+        granada = next((c for c in ciudades if c['id'] == self.ciudad.id), None)
+        self.assertIsNotNone(granada)
+        self.assertEqual(granada['nombre'], "Granada Colonial")
+        self.assertIn('traducciones', granada)
+        self.assertEqual(granada['traducciones']['en']['nombre'], "Colonial Granada")
+        self.assertEqual(granada['traducciones']['zh']['nombre'], "殖民地格拉纳达")
+
+    def test_traduccion_relacion_circuito_ciudad_nombre(self):
+        response = self.client.get(self.circuitos_url, HTTP_ACCEPT_LANGUAGE='zh-CN')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        circuitos = self._extract_items(response.data)
+        circuito = next((c for c in circuitos if c['id'] == self.circuito.id), None)
+        self.assertIsNotNone(circuito)
+        self.assertEqual(circuito['nombre'], "豪宅路线")
+        self.assertEqual(circuito['ciudad_nombre'], "殖民地格拉纳达")
+
 
 
 

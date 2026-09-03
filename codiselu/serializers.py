@@ -296,7 +296,97 @@ class GoogleAuthSerializer(serializers.Serializer):
         return attrs
 
 
-class DatoHistoricoSerializer(serializers.ModelSerializer):
+class TraduccionSerializerMixin:
+    """
+    Mixin para serializadores que traduce dinámicamente los campos según el idioma del cliente:
+    - Parámetro GET: ?lang=en, ?lang=zh, ?lang=es
+    - Header HTTP: Accept-Language: en, zh-hans, zh-CN, es
+    - Campos traducidos: sustituye el valor del campo principal ('nombre', 'descripcion', etc.)
+      por su versión traducida si existe, o mantiene el español como fallback.
+    - Además, incluye un diccionario 'traducciones' con todas las versiones disponibles.
+    """
+    CAMPOS_TRADUCIBLES = ['nombre', 'descripcion', 'titulo', 'contenido']
+
+    def obtener_idioma_cliente(self):
+        request = self.context.get('request')
+        if not request:
+            return 'es'
+        
+        # 1. Parámetro query ?lang= o ?idioma= (compatible con Request de DRF y WSGIRequest estándar)
+        query_dict = getattr(request, 'query_params', None)
+        if query_dict is None:
+            query_dict = getattr(request, 'GET', {})
+
+        lang_param = query_dict.get('lang') or query_dict.get('idioma')
+        if lang_param:
+            lang_norm = str(lang_param).lower().strip()
+            if 'zh' in lang_norm:
+                return 'zh'
+            if 'en' in lang_norm:
+                return 'en'
+            return 'es'
+
+        # 2. Header HTTP Accept-Language
+        accept_lang = request.META.get('HTTP_ACCEPT_LANGUAGE', '')
+        if accept_lang:
+            accept_lang_lower = accept_lang.lower()
+            if 'zh' in accept_lang_lower:
+                return 'zh'
+            if 'en' in accept_lang_lower:
+                return 'en'
+
+        return 'es'
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        idioma = self.obtener_idioma_cliente()
+
+        traducciones = {'es': {}, 'en': {}, 'zh': {}}
+
+        for campo in self.CAMPOS_TRADUCIBLES:
+            if hasattr(instance, campo):
+                val_es = getattr(instance, campo, None)
+                val_en = getattr(instance, f"{campo}_en", None)
+                val_zh = getattr(instance, f"{campo}_zh", None)
+
+                if val_es is not None:
+                    traducciones['es'][campo] = val_es
+                if val_en is not None:
+                    traducciones['en'][campo] = val_en
+                if val_zh is not None:
+                    traducciones['zh'][campo] = val_zh
+
+                if idioma == 'en' and val_en:
+                    data[campo] = val_en
+                elif idioma == 'zh' and val_zh:
+                    data[campo] = val_zh
+                elif idioma == 'es' and val_es:
+                    data[campo] = val_es
+
+        # Traducir también nombres relacionados directos si existen
+        if 'ciudad_nombre' in data and hasattr(instance, 'ciudad') and instance.ciudad:
+            if idioma == 'en' and instance.ciudad.nombre_en:
+                data['ciudad_nombre'] = instance.ciudad.nombre_en
+            elif idioma == 'zh' and instance.ciudad.nombre_zh:
+                data['ciudad_nombre'] = instance.ciudad.nombre_zh
+        if 'circuito_nombre' in data and hasattr(instance, 'circuito') and instance.circuito:
+            if idioma == 'en' and instance.circuito.nombre_en:
+                data['circuito_nombre'] = instance.circuito.nombre_en
+            elif idioma == 'zh' and instance.circuito.nombre_zh:
+                data['circuito_nombre'] = instance.circuito.nombre_zh
+        if 'empresa_nombre' in data and hasattr(instance, 'empresa') and instance.empresa:
+            if idioma == 'en' and instance.empresa.nombre_en:
+                data['empresa_nombre'] = instance.empresa.nombre_en
+            elif idioma == 'zh' and instance.empresa.nombre_zh:
+                data['empresa_nombre'] = instance.empresa.nombre_zh
+
+        if any(traducciones['en'].values()) or any(traducciones['zh'].values()):
+            data['traducciones'] = traducciones
+
+        return data
+
+
+class DatoHistoricoSerializer(TraduccionSerializerMixin, serializers.ModelSerializer):
     class Meta:
         model = DatoHistorico
         fields = ['id', 'ciudad', 'punto_interes', 'titulo', 'tipo', 'contenido', 'epoca_o_ano']
@@ -308,7 +398,7 @@ class GaleriaMultimediaSerializer(serializers.ModelSerializer):
         fields = ['id', 'ciudad', 'punto_interes', 'evento', 'titulo', 'tipo', 'imagen', 'video_url']
 
 
-class PuntoInteresSerializer(serializers.ModelSerializer):
+class PuntoInteresSerializer(TraduccionSerializerMixin, serializers.ModelSerializer):
     datos_historicos = DatoHistoricoSerializer(many=True, read_only=True)
     galeria = GaleriaMultimediaSerializer(many=True, read_only=True)
     circuito_nombre = serializers.ReadOnlyField(source='circuito.nombre')
@@ -321,7 +411,7 @@ class PuntoInteresSerializer(serializers.ModelSerializer):
         ]
 
 
-class CircuitoCreativoSerializer(serializers.ModelSerializer):
+class CircuitoCreativoSerializer(TraduccionSerializerMixin, serializers.ModelSerializer):
     ciudad_nombre = serializers.ReadOnlyField(source='ciudad.nombre')
     puntos_interes = PuntoInteresSerializer(many=True, read_only=True)
 
@@ -334,7 +424,7 @@ class CircuitoCreativoSerializer(serializers.ModelSerializer):
         ]
 
 
-class CiudadSerializer(serializers.ModelSerializer):
+class CiudadSerializer(TraduccionSerializerMixin, serializers.ModelSerializer):
     circuitos = CircuitoCreativoSerializer(many=True, read_only=True)
     datos_historicos = DatoHistoricoSerializer(many=True, read_only=True)
     galeria = GaleriaMultimediaSerializer(many=True, read_only=True)
@@ -423,7 +513,7 @@ class UsuarioPuntoVisitadoSerializer(serializers.ModelSerializer):
         return visita
 
 
-class EmpresaSerializer(serializers.ModelSerializer):
+class EmpresaSerializer(TraduccionSerializerMixin, serializers.ModelSerializer):
     usuario_username = serializers.ReadOnlyField(source='usuario.username')
     ciudad_nombre = serializers.ReadOnlyField(source='ciudad.nombre')
     punto_interes_nombre = serializers.ReadOnlyField(source='punto_interes.nombre')
@@ -440,7 +530,7 @@ class EmpresaSerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'usuario', 'usuario_username', 'fecha_creacion']
 
 
-class OportunidadInversionSerializer(serializers.ModelSerializer):
+class OportunidadInversionSerializer(TraduccionSerializerMixin, serializers.ModelSerializer):
     empresa_nombre = serializers.ReadOnlyField(source='empresa.nombre')
     empresa_acepta_inversiones = serializers.ReadOnlyField(source='empresa.acepta_inversiones')
 
@@ -549,7 +639,7 @@ class PublicacionSerializer(serializers.ModelSerializer):
         return False
 
 
-class EventoSerializer(serializers.ModelSerializer):
+class EventoSerializer(TraduccionSerializerMixin, serializers.ModelSerializer):
     creador_username = serializers.ReadOnlyField(source='creador.username')
     empresa_nombre = serializers.ReadOnlyField(source='empresa.nombre')
     ciudad_nombre = serializers.ReadOnlyField(source='ciudad.nombre')
