@@ -1,4 +1,7 @@
+import urllib.parse
 from django.db import models
+from django.shortcuts import redirect
+from django.conf import settings
 from rest_framework import viewsets, permissions, status, generics
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -14,6 +17,7 @@ from .serializers import (
     UserSerializer,
     RegisterSerializer,
     LoginSerializer,
+    GoogleAuthSerializer,
     CiudadSerializer,
     CircuitoCreativoSerializer,
     PuntoInteresSerializer,
@@ -89,6 +93,136 @@ class LoginView(APIView):
             'tokens': {
                 'refresh': str(refresh),
                 'access': str(refresh.access_token),
+            }
+        }, status=status.HTTP_200_OK)
+
+
+class GoogleAuthView(APIView):
+    """
+    Endpoint principal para autenticación con Google (Google Sign-In / ID Token / Code).
+    Acepta:
+      - 'id_token' o 'credential' (Google Identity Services Web / One Tap / React)
+      - 'code' (OAuth2 Authorization Code)
+      - 'access_token' (Google OAuth2 Token)
+    Retorna datos del usuario y tokens JWT de SimpleJWT.
+    """
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request, *args, **kwargs):
+        serializer = GoogleAuthSerializer(data=request.data, context={'request': request})
+        serializer.is_valid(raise_exception=True)
+
+        user = serializer.validated_data['user']
+        is_new_user = serializer.validated_data.get('is_new_user', False)
+        refresh = RefreshToken.for_user(user)
+        user_data = UserSerializer(user, context={'request': request}).data
+
+        return Response({
+            'message': 'Autenticación con Google exitosa.',
+            'is_new_user': is_new_user,
+            'user': user_data,
+            'tokens': {
+                'refresh': str(refresh),
+                'access': str(refresh.access_token),
+            }
+        }, status=status.HTTP_200_OK)
+
+
+class GoogleLoginUrlView(APIView):
+    """
+    Endpoint para generar y obtener la URL de autorización de Google OAuth2.
+    El frontend puede redirigir al usuario directamente a esta URL.
+    """
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request, *args, **kwargs):
+        client_id = getattr(settings, 'GOOGLE_CLIENT_ID', '')
+        if not client_id:
+            return Response(
+                {'error': 'GOOGLE_CLIENT_ID no está configurado en las variables de entorno del servidor.'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+        redirect_uri = request.query_params.get('redirect_uri') or getattr(settings, 'GOOGLE_REDIRECT_URI', '')
+        if not redirect_uri:
+            redirect_uri = request.build_absolute_uri('/api/auth/google/callback/')
+
+        params = {
+            'client_id': client_id,
+            'redirect_uri': redirect_uri,
+            'response_type': 'code',
+            'scope': 'openid email profile',
+            'access_type': 'offline',
+            'prompt': 'select_account',
+        }
+        state = request.query_params.get('state')
+        if state:
+            params['state'] = state
+
+        auth_url = f"https://accounts.google.com/o/oauth2/v2/auth?{urllib.parse.urlencode(params)}"
+        return Response({
+            'url': auth_url,
+            'redirect_uri': redirect_uri
+        }, status=status.HTTP_200_OK)
+
+
+class GoogleAuthCallbackView(APIView):
+    """
+    Endpoint callback para recibir la redirección de Google OAuth2 tras la autorización.
+    Procesa el 'code', obtiene tokens JWT y redirige al frontend o retorna JSON.
+    """
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request, *args, **kwargs):
+        error = request.query_params.get('error')
+        if error:
+            error_description = request.query_params.get('error_description', error)
+            frontend_url = getattr(settings, 'FRONTEND_URL', '')
+            if frontend_url and 'text/html' in request.META.get('HTTP_ACCEPT', ''):
+                return redirect(f"{frontend_url.rstrip('/')}/auth/callback?error={urllib.parse.quote(error_description)}")
+            return Response({'error': error, 'error_description': error_description}, status=status.HTTP_400_BAD_REQUEST)
+
+        code = request.query_params.get('code')
+        if not code:
+            return Response({'error': 'No se proporcionó el código de autorización de Google.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        redirect_uri = getattr(settings, 'GOOGLE_REDIRECT_URI', '') or request.build_absolute_uri(request.path)
+
+        serializer = GoogleAuthSerializer(data={'code': code, 'redirect_uri': redirect_uri}, context={'request': request})
+        try:
+            serializer.is_valid(raise_exception=True)
+        except Exception as e:
+            detail = getattr(e, 'detail', str(e))
+            frontend_url = getattr(settings, 'FRONTEND_URL', '')
+            if frontend_url and 'text/html' in request.META.get('HTTP_ACCEPT', ''):
+                return redirect(f"{frontend_url.rstrip('/')}/auth/callback?error={urllib.parse.quote(str(detail))}")
+            return Response({'error': detail}, status=status.HTTP_400_BAD_REQUEST)
+
+        user = serializer.validated_data['user']
+        is_new_user = serializer.validated_data.get('is_new_user', False)
+        refresh = RefreshToken.for_user(user)
+        access_token = str(refresh.access_token)
+        refresh_token = str(refresh)
+
+        # Si la petición proviene de un navegador web y hay FRONTEND_URL configurado, redirigir al frontend con tokens
+        frontend_url = getattr(settings, 'FRONTEND_URL', '')
+        accept_header = request.META.get('HTTP_ACCEPT', '')
+        if frontend_url and ('text/html' in accept_header or '*/*' in accept_header) and 'application/json' not in accept_header:
+            callback_redirect = (
+                f"{frontend_url.rstrip('/')}/auth/callback?"
+                f"access={access_token}&refresh={refresh_token}&is_new={'true' if is_new_user else 'false'}"
+            )
+            return redirect(callback_redirect)
+
+        # De lo contrario devolver respuesta JSON directa
+        user_data = UserSerializer(user, context={'request': request}).data
+        return Response({
+            'message': 'Autenticación con Google exitosa.',
+            'is_new_user': is_new_user,
+            'user': user_data,
+            'tokens': {
+                'refresh': refresh_token,
+                'access': access_token,
             }
         }, status=status.HTTP_200_OK)
 

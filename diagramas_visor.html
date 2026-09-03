@@ -1,0 +1,762 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visor de Arquitectura: ER 3FN y UML Completos - CodiseCore</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/svg-pan-zoom@3.6.1/dist/svg-pan-zoom.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&family=JetBrains+Mono:wght@400;600&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0b0f19;
+            --bg-card: #111827;
+            --bg-card-header: #1f2937;
+            --border-color: #374151;
+            --text-main: #f3f4f6;
+            --text-muted: #9ca3af;
+            --accent-primary: #6366f1;
+            --accent-glow: rgba(99, 102, 241, 0.25);
+            --accent-teal: #14b8a6;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        header {
+            background: linear-gradient(135deg, #111827 0%, #1e1b4b 100%);
+            border-bottom: 1px solid var(--border-color);
+            padding: 1.25rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 50;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+        }
+
+        .header-title h1 {
+            font-size: 1.4rem;
+            font-weight: 700;
+            background: linear-gradient(90deg, #818cf8, #38bdf8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .header-title p {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-top: 0.2rem;
+        }
+
+        .nav-tabs {
+            display: flex;
+            gap: 0.5rem;
+            background: rgba(17, 24, 39, 0.8);
+            padding: 0.35rem;
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+        }
+
+        .tab-btn {
+            background: transparent;
+            color: var(--text-muted);
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            font-family: inherit;
+            font-size: 0.875rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .tab-btn:hover {
+            color: var(--text-main);
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .tab-btn.active {
+            background: var(--accent-primary);
+            color: #ffffff;
+            box-shadow: 0 0 15px var(--accent-glow);
+        }
+
+        main {
+            flex: 1;
+            padding: 1.5rem 2rem;
+            max-width: 1600px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        .diagram-section {
+            display: none;
+        }
+
+        .diagram-section.active {
+            display: block;
+            animation: fadeIn 0.25s ease-in-out forwards;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(4px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .card-header {
+            background: var(--bg-card-header);
+            padding: 0.9rem 1.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .card-header h2 {
+            font-size: 1.1rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .badge {
+            font-size: 0.75rem;
+            font-family: 'JetBrains Mono', monospace;
+            padding: 0.2rem 0.6rem;
+            border-radius: 9999px;
+            background: rgba(20, 184, 166, 0.15);
+            color: var(--accent-teal);
+            border: 1px solid rgba(20, 184, 166, 0.3);
+        }
+
+        .btn-action {
+            background: #2563eb;
+            color: white;
+            border: none;
+            padding: 0.45rem 0.9rem;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .btn-action:hover {
+            background: #1d4ed8;
+        }
+
+        .diagram-canvas {
+            min-height: 650px;
+            height: 75vh;
+            width: 100%;
+            background: #0f172a;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .diagram-canvas svg {
+            width: 100% !important;
+            height: 100% !important;
+            max-width: 100%;
+        }
+
+        .loading {
+            font-family: 'JetBrains Mono', monospace;
+            color: #818cf8;
+            font-size: 0.95rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .error-box {
+            background: rgba(239, 68, 68, 0.15);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: #f87171;
+            padding: 1.5rem;
+            border-radius: 12px;
+            font-family: 'JetBrains Mono', monospace;
+            max-width: 600px;
+        }
+
+        .info-panel {
+            margin-top: 1rem;
+            padding: 1rem 1.5rem;
+            background: rgba(17, 24, 39, 0.5);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            line-height: 1.5;
+        }
+
+        .info-panel strong {
+            color: var(--text-main);
+        }
+    </style>
+</head>
+
+<body>
+
+    <header>
+        <div class="header-title">
+            <h1>Codice路 // Arquitectura de Datos y UML</h1>
+            <p>Modelado Técnico formal: Base de Datos Normalizada (3FN) y 3 Diagramas UML</p>
+        </div>
+        <nav class="nav-tabs">
+            <button class="tab-btn active" onclick="switchTab('er-tab', this)">1. ER Base de Datos (3FN)</button>
+            <button class="tab-btn" onclick="switchTab('clases-tab', this)">2. Diagrama de Clases UML</button>
+            <button class="tab-btn" onclick="switchTab('casos-tab', this)">3. Casos de Uso UML</button>
+            <button class="tab-btn" onclick="switchTab('actividades-tab', this)">4. Actividades UML</button>
+        </nav>
+    </header>
+
+    <main>
+        <!-- 1. DIAGRAMA ER (3FN) -->
+        <section id="er-tab" class="diagram-section active">
+            <div class="card">
+                <div class="card-header">
+                    <h2>📊 Diagrama Entidad-Relación <span class="badge">3FN Normalizado</span></h2>
+                    <div class="controls">
+                        <button class="btn-action" onclick="downloadSVG('er-canvas', 'ER_CodiseCore_3FN.svg')">📥
+                            Descargar SVG</button>
+                    </div>
+                </div>
+                <div class="diagram-canvas" id="er-canvas"></div>
+            </div>
+            <div class="info-panel">
+                <strong>Normalización 3FN Cumplida:</strong> Cero redundancia funcional transitiva. Las relaciones de
+                auditoría GPS (<code>UsuarioPuntoVisitado</code>), inversión (<code>OportunidadInversion</code> /
+                <code>InversionTurista</code>) y agenda (<code>Evento</code> / <code>EventoAsistencia</code>) se
+                encuentran desacopladas e indexadas con claves foráneas explícitas.
+            </div>
+        </section>
+
+        <!-- 2. DIAGRAMA DE CLASES UML -->
+        <section id="clases-tab" class="diagram-section">
+            <div class="card">
+                <div class="card-header">
+                    <h2>📐 Diagrama de Clases UML <span class="badge">Estructural</span></h2>
+                    <div class="controls">
+                        <button class="btn-action"
+                            onclick="downloadSVG('clases-canvas', 'Clases_UML_CodiseCore.svg')">📥 Descargar
+                            SVG</button>
+                    </div>
+                </div>
+                <div class="diagram-canvas" id="clases-canvas"></div>
+            </div>
+            <div class="info-panel">
+                <strong>Estructura Orientada a Objetos:</strong> Refleja la herencia desde <code>AbstractUser</code> de
+                Django, tipado de atributos, métodos de dominio y propiedades calculadas como <code>en_mural()</code>,
+                <code>total_granos_cafe()</code> y <code>total_asistentes()</code>.
+            </div>
+        </section>
+
+        <!-- 3. CASOS DE USO UML -->
+        <section id="casos-tab" class="diagram-section">
+            <div class="card">
+                <div class="card-header">
+                    <h2>🎯 Diagrama de Casos de Uso UML <span class="badge">Funcional</span></h2>
+                    <div class="controls">
+                        <button class="btn-action" onclick="downloadSVG('casos-canvas', 'Casos_Uso_CodiseCore.svg')">📥
+                            Descargar SVG</button>
+                    </div>
+                </div>
+                <div class="diagram-canvas" id="casos-canvas"></div>
+            </div>
+            <div class="info-panel">
+                <strong>Actores y Casos de Uso:</strong> Modela las interacciones de los 4 actores del ecosistema
+                (<em>Turista / Visitante</em>, <em>Protagonista / Emprendedor</em>, <em>Inversionista Estratégico</em> y
+                <em>Administrador de Ciudad</em>) con relaciones <code>&lt;&lt;include&gt;&gt;</code> y
+                <code>&lt;&lt;extend&gt;&gt;</code>.
+            </div>
+        </section>
+
+        <!-- 4. ACTIVIDADES UML -->
+        <section id="actividades-tab" class="diagram-section">
+            <div class="card">
+                <div class="card-header">
+                    <h2>🔄 Diagrama de Actividades UML <span class="badge">Comportamiento</span></h2>
+                    <div class="controls">
+                        <button class="btn-action"
+                            onclick="downloadSVG('actividades-canvas', 'Actividades_UML_CodiseCore.svg')">📥 Descargar
+                            SVG</button>
+                    </div>
+                </div>
+                <div class="diagram-canvas" id="actividades-canvas"></div>
+            </div>
+            <div class="info-panel">
+                <strong>Flujo de Validación Geográfica GPS:</strong> Modela el ciclo de verificación de coordenadas del
+                usuario mediante el cálculo de proximidad Haversine (radio &le; 50 metros) para validar visitas a puntos
+                de interés y desbloqueo de reconocimientos.
+            </div>
+        </section>
+    </main>
+
+    <script>
+        mermaid.initialize({
+            startOnLoad: false,
+            theme: 'dark',
+            securityLevel: 'loose',
+            er: { useMaxWidth: false },
+            flowchart: { useMaxWidth: false }
+        });
+
+        const DIAGRAM_CODES = {
+            'er-tab': {
+                canvasId: 'er-canvas',
+                code: `erDiagram
+    AUTH_USER {
+        int id PK
+        string username
+        string email
+        boolean es_protagonista
+        boolean es_turista
+        string telefono
+        string foto_perfil
+    }
+    CIUDAD {
+        int id PK
+        string nombre UK
+        text descripcion
+        string imagen_portada
+        float latitud_centro
+        float longitud_centro
+    }
+    CIRCUITO_CREATIVO {
+        int id PK
+        int ciudad_id FK
+        string nombre
+        text descripcion
+        decimal distancia_km
+        string duracion_estimada
+        string dificultad
+    }
+    PUNTO_INTERES {
+        int id PK
+        int circuito_id FK
+        string nombre
+        text descripcion
+        string tipo
+        int orden
+        float latitud
+        float longitud
+    }
+    DATO_HISTORICO {
+        int id PK
+        int ciudad_id FK
+        int punto_interes_id FK
+        string titulo
+        string tipo
+        text contenido
+        string epoca_o_ano
+    }
+    GALERIA_MULTIMEDIA {
+        int id PK
+        int ciudad_id FK
+        int punto_interes_id FK
+        int evento_id FK
+        string titulo
+        string tipo
+        string imagen
+        string video_url
+    }
+    USUARIO_PUNTO_VISITADO {
+        int id PK
+        int usuario_id FK
+        int punto_interes_id FK
+        datetime fecha_visita
+        float latitud_usuario
+        float longitud_usuario
+        boolean es_validada
+        float distancia_metros
+    }
+    EMPRESA {
+        int id PK
+        int usuario_id FK
+        int ciudad_id FK
+        int punto_interes_id FK
+        string nombre
+        text descripcion
+        string categoria
+        boolean acepta_inversiones
+    }
+    OPORTUNIDAD_INVERSION {
+        int id PK
+        int empresa_id FK
+        string titulo
+        decimal monto_requerido
+        decimal monto_minimo_inversion
+        decimal monto_recaudado
+        string retorno_estimado
+        string tipo_inversor_permitido
+        boolean esta_activa
+    }
+    INVERSION_TURISTA {
+        int id PK
+        int inversionista_id FK
+        int oportunidad_id FK
+        decimal monto_propuesto
+        string tipo_inversor
+        string estado
+        datetime fecha_solicitud
+    }
+    EVENTO {
+        int id PK
+        int creador_id FK
+        int empresa_id FK
+        int ciudad_id FK
+        string titulo
+        datetime fecha_inicio
+        datetime fecha_fin
+        string ubicacion
+        boolean es_oficial
+        boolean esta_activo
+    }
+    EVENTO_ASISTENCIA {
+        int id PK
+        int usuario_id FK
+        int evento_id FK
+        datetime fecha_registro
+    }
+    PUBLICACION {
+        int id PK
+        int autor_id FK
+        int empresa_id FK
+        int ciudad_id FK
+        int evento_id FK
+        string titulo
+        text descripcion
+        boolean esta_activa
+    }
+    PUBLICACION_IMAGEN {
+        int id PK
+        int publicacion_id FK
+        string imagen
+    }
+    COMENTARIO_PUBLICACION {
+        int id PK
+        int publicacion_id FK
+        int autor_id FK
+        text contenido
+        boolean esta_activo
+    }
+
+    CIUDAD ||--o{ CIRCUITO_CREATIVO : "posee"
+    CIUDAD ||--o{ DATO_HISTORICO : "documenta"
+    CIUDAD ||--o{ EMPRESA : "radica_en"
+    CIUDAD ||--o{ EVENTO : "organiza"
+    CIRCUITO_CREATIVO ||--|{ PUNTO_INTERES : "contiene"
+    PUNTO_INTERES ||--o{ DATO_HISTORICO : "tiene_contexto"
+    PUNTO_INTERES ||--o{ GALERIA_MULTIMEDIA : "contiene_fotos"
+    PUNTO_INTERES ||--o{ USUARIO_PUNTO_VISITADO : "recibe_visitas"
+    PUNTO_INTERES ||--o{ EMPRESA : "alberga"
+    AUTH_USER ||--o{ USUARIO_PUNTO_VISITADO : "registra"
+    AUTH_USER ||--o{ EMPRESA : "administra"
+    AUTH_USER ||--o{ INVERSION_TURISTA : "invierte"
+    AUTH_USER ||--o{ EVENTO : "crea"
+    AUTH_USER ||--o{ EVENTO_ASISTENCIA : "confirma"
+    AUTH_USER ||--o{ PUBLICACION : "publica"
+    EMPRESA ||--o{ OPORTUNIDAD_INVERSION : "oferta"
+    EMPRESA ||--o{ EVENTO : "patrocina"
+    OPORTUNIDAD_INVERSION ||--o{ INVERSION_TURISTA : "recibe"
+    EVENTO ||--o{ EVENTO_ASISTENCIA : "registra"
+    EVENTO ||--o{ GALERIA_MULTIMEDIA : "documenta"
+    PUBLICACION ||--|{ PUBLICACION_IMAGEN : "incluye"
+    PUBLICACION ||--o{ COMENTARIO_PUBLICACION : "tiene"`
+            },
+            'clases-tab': {
+                canvasId: 'clases-canvas',
+                code: `classDiagram
+    direction TB
+
+    class AbstractUser {
+        <<Abstract>>
+        +String username
+        +String email
+        +String password
+        +Boolean is_active
+    }
+
+    class User {
+        +Boolean es_protagonista
+        +Boolean es_turista
+        +String telefono
+        +ImageField foto_perfil
+        +__str__() String
+    }
+
+    class Ciudad {
+        +String nombre
+        +String descripcion
+        +Float latitud_centro
+        +Float longitud_centro
+        +__str__() String
+    }
+
+    class CircuitoCreativo {
+        +String nombre
+        +Decimal distancia_km
+        +String duracion_estimada
+        +String dificultad
+        +__str__() String
+    }
+
+    class PuntoInteres {
+        +String nombre
+        +String tipo
+        +Integer orden
+        +Float latitud
+        +Float longitud
+        +__str__() String
+    }
+
+    class Empresa {
+        +String nombre
+        +String categoria
+        +String direccion
+        +Boolean acepta_inversiones
+        +__str__() String
+    }
+
+    class OportunidadInversion {
+        +String titulo
+        +Decimal monto_requerido
+        +Decimal monto_minimo_inversion
+        +Decimal monto_recaudado
+        +Boolean esta_activa
+        +__str__() String
+    }
+
+    class InversionTurista {
+        +Decimal monto_propuesto
+        +String tipo_inversor
+        +String estado
+        +DateTime fecha_solicitud
+        +__str__() String
+    }
+
+    class Evento {
+        +String titulo
+        +DateTime fecha_inicio
+        +DateTime fecha_fin
+        +Boolean es_oficial
+        +en_mural() Boolean
+        +total_granos_cafe() Integer
+        +total_asistentes() Integer
+        +__str__() String
+    }
+
+    class UsuarioPuntoVisitado {
+        +DateTime fecha_visita
+        +Boolean es_validada
+        +Float distancia_metros
+        +__str__() String
+    }
+
+    class Publicacion {
+        +String titulo
+        +String descripcion
+        +Boolean esta_activa
+        +total_likes() Integer
+        +total_comentarios() Integer
+        +__str__() String
+    }
+
+    AbstractUser <|-- User
+    Ciudad "1" *-- "0..*" CircuitoCreativo : circuitos
+    CircuitoCreativo "1" *-- "1..*" PuntoInteres : puntos_interes
+    Empresa "0..*" --> "1" User : gestionada_por
+    Empresa "0..*" --> "1" Ciudad : ubicada_en
+    Empresa "1" *-- "0..*" OportunidadInversion : ofrece
+    OportunidadInversion "1" o-- "0..*" InversionTurista : recibe
+    InversionTurista "0..*" --> "1" User : postulada_por
+    Evento "0..*" --> "1" User : creado_por
+    Evento "0..*" --> "0..1" Ciudad : sede
+    UsuarioPuntoVisitado "0..*" --> "1" User : visitado_por
+    UsuarioPuntoVisitado "0..*" --> "1" PuntoInteres : punto
+    Publicacion "0..*" --> "1" User : publicada_por`
+            },
+            'casos-tab': {
+                canvasId: 'casos-canvas',
+                code: `flowchart TD
+    subgraph ACTORES[Actores del Sistema]
+        T[Turista / Visitante]
+        P[Protagonista / Negocio]
+        INV[Inversionista Estratégico]
+        ADM[Administrador / Alcaldía]
+    end
+
+    subgraph SISTEMA[CodiseCore - Circuitos Creativos]
+        CU1[CU01: Explorar Ciudades y Circuitos]
+        CU2[CU02: Visualizar Mapa Interactivo]
+        CU3[CU03: Validar Visita GPS al Punto]
+        CU4[CU04: Confirmar Asistencia a Evento]
+        CU5[CU05: Apoyar con Granos de Café]
+        CU6[CU06: Publicar en Feed Comunitario]
+        
+        CU7[CU07: Gestionar Perfil de Empresa]
+        CU8[CU08: Publicar Evento Cultural]
+        CU9[CU09: Crear Oportunidad de Inversión]
+        CU10[CU10: Gestionar Inversiones]
+        
+        CU11[CU11: Postular Oferta de Inversión]
+        
+        CU12[CU12: Marcar Evento como Oficial]
+        CU13[CU13: Auditar Métricas de Impacto]
+    end
+
+    T --> CU1
+    T --> CU2
+    T --> CU3
+    T --> CU4
+    T --> CU5
+    T --> CU6
+
+    P --> CU7
+    P --> CU8
+    P --> CU9
+    P --> CU10
+    P --> CU6
+
+    INV --> CU1
+    INV --> CU11
+
+    ADM --> CU12
+    ADM --> CU13
+
+    CU2 -.->|include| CU1
+    CU3 -.->|extend| CU2
+    CU11 -.->|include| CU9`
+            },
+            'actividades-tab': {
+                canvasId: 'actividades-canvas',
+                code: `stateDiagram-v2
+    state VerifGPS <<choice>>
+
+    [*] --> AbrirCircuito : Turista abre circuito creativo
+    AbrirCircuito --> SeleccionarPunto : Selecciona punto en mapa
+    SeleccionarPunto --> ObtenerGPS : App solicita coordenadas GPS
+    ObtenerGPS --> VerifGPS : Calcula distancia Haversine
+    
+    VerifGPS --> VisitaInvalida : Distancia > 50m
+    VerifGPS --> RegistrarVisita : Distancia <= 50m
+    
+    VisitaInvalida --> NotificarUsuario : Fuera de perimetro
+    NotificarUsuario --> SeleccionarPunto
+    
+    RegistrarVisita --> GuardarEnBD : Insertar en BD (es_validada=True)
+    GuardarEnBD --> DesbloquearInsignia : Otorgar reconocimiento
+    DesbloquearInsignia --> PermitirResena : Habilitar calificacion
+    PermitirResena --> [*]`
+            }
+        };
+
+        const renderedTabs = new Set();
+
+        async function renderDiagram(tabId) {
+            if (renderedTabs.has(tabId)) return;
+            const config = DIAGRAM_CODES[tabId];
+            if (!config) return;
+
+            const container = document.getElementById(config.canvasId);
+            container.innerHTML = '<div class="loading">⏳ Renderizando diagrama...</div>';
+
+            try {
+                const uniqueId = `mermaid_svg_${tabId}_${Date.now()}`;
+                const { svg } = await mermaid.render(uniqueId, config.code);
+                container.innerHTML = svg;
+                renderedTabs.add(tabId);
+
+                const svgElement = container.querySelector('svg');
+                if (svgElement) {
+                    svgPanZoom(svgElement, {
+                        zoomEnabled: true,
+                        controlIconsEnabled: true,
+                        fit: true,
+                        center: true,
+                        minZoom: 0.2,
+                        maxZoom: 10
+                    });
+                }
+            } catch (err) {
+                console.error(`Error renderizando ${tabId}:`, err);
+                container.innerHTML = `<div class="error-box">⚠️ Error al renderizar: ${err.message || err}</div>`;
+            }
+        }
+
+        async function switchTab(tabId, btn) {
+            document.querySelectorAll('.diagram-section').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+
+            document.getElementById(tabId).classList.add('active');
+            btn.classList.add('active');
+
+            await renderDiagram(tabId);
+        }
+
+        // Renderizar el primer tab automáticamente al cargar la página
+        window.addEventListener('DOMContentLoaded', () => {
+            renderDiagram('er-tab');
+        });
+
+        function downloadSVG(canvasId, filename) {
+            const svgElement = document.querySelector(`#${canvasId} svg`);
+            if (!svgElement) return alert('El diagrama aún no ha sido renderizado.');
+
+            const serializer = new XMLSerializer();
+            const source = '<?xml version="1.0" standalone="no"?>\r\n' + serializer.serializeToString(svgElement);
+            const url = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(source);
+
+            const downloadLink = document.createElement("a");
+            downloadLink.href = url;
+            downloadLink.download = filename;
+            document.body.appendChild(downloadLink);
+            downloadLink.click();
+            document.body.removeChild(downloadLink);
+        }
+    </script>
+</body>
+
+</html>
