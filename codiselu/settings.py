@@ -40,9 +40,16 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'rest_framework',
     'rest_framework_simplejwt',
-    'django_extensions',
     'codiselu',
 ]
+
+# Herramientas opcionales de desarrollo (solo si están instaladas en el entorno)
+try:
+    import django_extensions  # noqa: F401
+    INSTALLED_APPS.append('django_extensions')
+except ImportError:
+    pass
+
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
