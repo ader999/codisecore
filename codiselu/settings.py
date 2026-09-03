@@ -157,6 +157,7 @@ USE_TZ = True
 
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
+STATICFILES_DIRS = [BASE_DIR / 'static']
 
 USE_S3 = os.environ.get('USE_S3', 'False').lower() in ('true', '1', 't')
 
