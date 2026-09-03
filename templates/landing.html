@@ -1,19 +1,23 @@
 {% load static %}
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Codice路 | Plataforma Oficial de Turismo Cultural y Ciudades Creativas de Nicaragua</title>
-  
-  <meta name="description" content="Descubre Codice路: la plataforma móvil y digital que conecta las 10 Ciudades Creativas de Nicaragua mediante rutas turísticas interactivas, validación GPS Haversine, recompensas de Granos de Café y catálogo de artesanos locales.">
-  <meta name="keywords" content="Codice, CodiceLu, Nicaragua, Ciudades Creativas, Circuitos Creativos, Turismo Nicaragua, Esteli, Leon, Granada, Masaya, GPS Haversine">
+
+  <meta name="description"
+    content="Descubre Codice路: la plataforma móvil y digital que conecta las 10 Ciudades Creativas de Nicaragua mediante rutas turísticas interactivas, validación GPS Haversine, recompensas de Granos de Café y catálogo de artesanos locales.">
+  <meta name="keywords"
+    content="Codice, CodiceLu, Nicaragua, Ciudades Creativas, Circuitos Creativos, Turismo Nicaragua, Esteli, Leon, Granada, Masaya, GPS Haversine">
   <meta name="author" content="Codice路 Team">
 
   <!-- Open Graph / Redes Sociales -->
   <meta property="og:type" content="website">
   <meta property="og:title" content="Codice路 | Turismo Cultural y Ciudades Creativas">
-  <meta property="og:description" content="Rutas culturales interactivas, validación por GPS y conexión directa con artesanos y MiPymes de Nicaragua.">
+  <meta property="og:description"
+    content="Rutas culturales interactivas, validación por GPS y conexión directa con artesanos y MiPymes de Nicaragua.">
   <meta property="og:image" content="{% static 'img/logocodicelu.png' %}">
 
   <!-- Favicon -->
@@ -22,6 +26,7 @@
   <!-- Estilos -->
   <link rel="stylesheet" href="{% static 'css/landing.css' %}">
 </head>
+
 <body>
 
   <!-- Encabezado / Barra de Navegación -->
@@ -30,7 +35,6 @@
       <a href="#" class="brand-wrapper" title="Codice路 Inicio">
         <img src="{% static 'img/logocodicelu.png' %}" alt="Logo Codice路" class="brand-logo-img">
         <div class="brand-name">
-          Codice<span class="brand-kanji">路</span>
           <span class="brand-badge">Oficial</span>
         </div>
       </a>
@@ -41,12 +45,16 @@
         <a href="#ciudades" class="nav-link">10 Ciudades</a>
         <a href="#descarga" class="nav-link">Descarga</a>
         <a href="#terminos" class="nav-link" data-open-modal="legalModal" data-target-tab="terminosApp">Términos</a>
-        <a href="#privacidad" class="nav-link" data-open-modal="legalModal" data-target-tab="privacidadApp">Privacidad</a>
+        <a href="#privacidad" class="nav-link" data-open-modal="legalModal"
+          data-target-tab="privacidadApp">Privacidad</a>
       </nav>
 
       <div class="nav-actions">
         <a href="/api/" class="btn btn-outline-gold" target="_blank" rel="noopener">
-          <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path></svg>
+          <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path>
+          </svg>
           API REST
         </a>
         <button class="mobile-menu-toggle" id="mobileMenuToggle" aria-label="Abrir Menú">
@@ -64,13 +72,15 @@
           <span class="pulse-dot"></span>
           Red Nacional de Ciudades Creativas de Nicaragua
         </div>
-        
+
         <h1 class="hero-title">
           Explora el alma cultural de Nicaragua con Codice<span class="brand-kanji">路</span>
         </h1>
-        
+
         <p class="hero-description">
-          La plataforma digital que transforma tu viaje. Recorre circuitos creativos en las 10 ciudades emblemáticas, valida tus visitas históricas con GPS inteligente, gana <strong>Granos de Café</strong> y apoya directamente a los protagonistas y artesanos locales.
+          La plataforma digital que transforma tu viaje. Recorre circuitos creativos en las 10 ciudades emblemáticas,
+          valida tus visitas históricas con GPS inteligente, gana <strong>Granos de Café</strong> y apoya directamente a
+          los protagonistas y artesanos locales.
         </p>
 
         <!-- Botones de Descarga Destacados -->
@@ -80,10 +90,11 @@
             <div class="store-btn-icon">
               <!-- SVG Google Play Logo -->
               <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
-                <path d="M3.6 1.8c-.3.3-.5.8-.5 1.4v17.6c0 .6.2 1.1.5 1.4l.1.1 9.9-9.9v-.2L3.7 1.7l-.1.1z" fill="#00e5ff"/>
-                <path d="M16.9 15.6l-3.3-3.3v-.2l3.3-3.3.1.1 3.9 2.2c1.1.6 1.1 1.7 0 2.3l-4 2.2z" fill="#ffeb3b"/>
-                <path d="M13.6 12.1L3.6 22.2c.4.4 1 .5 1.7.1l11.6-6.6-3.3-3.6z" fill="#ff3d00"/>
-                <path d="M13.6 11.9l3.3-3.6L5.3 1.7c-.7-.4-1.3-.3-1.7.1l10 10.1z" fill="#00e676"/>
+                <path d="M3.6 1.8c-.3.3-.5.8-.5 1.4v17.6c0 .6.2 1.1.5 1.4l.1.1 9.9-9.9v-.2L3.7 1.7l-.1.1z"
+                  fill="#00e5ff" />
+                <path d="M16.9 15.6l-3.3-3.3v-.2l3.3-3.3.1.1 3.9 2.2c1.1.6 1.1 1.7 0 2.3l-4 2.2z" fill="#ffeb3b" />
+                <path d="M13.6 12.1L3.6 22.2c.4.4 1 .5 1.7.1l11.6-6.6-3.3-3.6z" fill="#ff3d00" />
+                <path d="M13.6 11.9l3.3-3.6L5.3 1.7c-.7-.4-1.3-.3-1.7.1l10 10.1z" fill="#00e676" />
               </svg>
             </div>
             <div class="store-btn-text">
@@ -98,9 +109,15 @@
             <div class="store-btn-icon">
               <!-- SVG Android Robot -->
               <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
-                <path d="M6 18c0 .55.45 1 1 1h1v3.5c0 .83.67 1.5 1.5 1.5s1.5-.67 1.5-1.5V19h2v3.5c0 .83.67 1.5 1.5 1.5s1.5-.67 1.5-1.5V19h1c.55 0 1-.45 1-1V8H6v10z" fill="#10b981"/>
-                <path d="M3.5 8C2.67 8 2 8.67 2 9.5v6c0 .83.67 1.5 1.5 1.5S5 16.33 5 15.5v-6C5 8.67 4.33 8 3.5 8zm17 0c-.83 0-1.5.67-1.5 1.5v6c0 .83.67 1.5 1.5 1.5s1.5-.67 1.5-1.5v-6c0-.83-.67-1.5-1.5-1.5z" fill="#10b981"/>
-                <path d="M7 6.8h10V5.5c0-1.93-1.57-3.5-3.5-3.5h-3C8.57 2 7 3.57 7 5.5v1.3zm3.5-2.8c.28 0 .5.22.5.5s-.22.5-.5.5-.5-.22-.5-.5.22-.5.5-.5zm3 0c.28 0 .5.22.5.5s-.22.5-.5.5-.5-.22-.5-.5.22-.5.5-.5z" fill="#10b981"/>
+                <path
+                  d="M6 18c0 .55.45 1 1 1h1v3.5c0 .83.67 1.5 1.5 1.5s1.5-.67 1.5-1.5V19h2v3.5c0 .83.67 1.5 1.5 1.5s1.5-.67 1.5-1.5V19h1c.55 0 1-.45 1-1V8H6v10z"
+                  fill="#10b981" />
+                <path
+                  d="M3.5 8C2.67 8 2 8.67 2 9.5v6c0 .83.67 1.5 1.5 1.5S5 16.33 5 15.5v-6C5 8.67 4.33 8 3.5 8zm17 0c-.83 0-1.5.67-1.5 1.5v6c0 .83.67 1.5 1.5 1.5s1.5-.67 1.5-1.5v-6c0-.83-.67-1.5-1.5-1.5z"
+                  fill="#10b981" />
+                <path
+                  d="M7 6.8h10V5.5c0-1.93-1.57-3.5-3.5-3.5h-3C8.57 2 7 3.57 7 5.5v1.3zm3.5-2.8c.28 0 .5.22.5.5s-.22.5-.5.5-.5-.22-.5-.5.22-.5.5-.5zm3 0c.28 0 .5.22.5.5s-.22.5-.5.5-.5-.22-.5-.5.22-.5.5-.5z"
+                  fill="#10b981" />
               </svg>
             </div>
             <div class="store-btn-text">
@@ -113,11 +130,19 @@
 
         <div class="hero-meta">
           <div class="meta-item">
-            <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
+            <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z">
+              </path>
+            </svg>
             GPS Haversine Certificado
           </div>
           <div class="meta-item">
-            <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+            <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z">
+              </path>
+            </svg>
             Recompensas Gamificadas
           </div>
         </div>
@@ -239,7 +264,8 @@
         <span class="section-subtitle">Innovación & Identidad</span>
         <h2 class="section-title">Tecnología al Servicio de Nuestras Tradiciones</h2>
         <p class="section-lead">
-          Codice路 combina geo-inteligencia, gamificación y promoción económica para crear una experiencia inmersiva para el turismo nacional e internacional.
+          Codice路 combina geo-inteligencia, gamificación y promoción económica para crear una experiencia inmersiva para
+          el turismo nacional e internacional.
         </p>
       </div>
 
@@ -249,7 +275,8 @@
           <div class="feature-icon-box">🗺️</div>
           <h3 class="feature-title">Circuitos Creativos Guiados</h3>
           <p class="feature-text">
-            Explora rutas temáticas curadas por historiadores y artesanos. Descubre mitos, leyendas, arquitectura colonial y centros gastronómicos en mapas interactivos de alta definición.
+            Explora rutas temáticas curadas por historiadores y artesanos. Descubre mitos, leyendas, arquitectura
+            colonial y centros gastronómicos en mapas interactivos de alta definición.
           </p>
         </div>
 
@@ -258,7 +285,8 @@
           <div class="feature-icon-box">📍</div>
           <h3 class="feature-title">Validación GPS (Haversine)</h3>
           <p class="feature-text">
-            El sistema comprueba que estés físicamente en el lugar usando la fórmula trigonométrica de Haversine dentro de un radio de tolerancia, desbloqueando contenido exclusivo e insignias.
+            El sistema comprueba que estés físicamente en el lugar usando la fórmula trigonométrica de Haversine dentro
+            de un radio de tolerancia, desbloqueando contenido exclusivo e insignias.
           </p>
         </div>
 
@@ -267,7 +295,8 @@
           <div class="feature-icon-box">☕</div>
           <h3 class="feature-title">Gamificación con Granos de Café</h3>
           <p class="feature-text">
-            Acumula Granos de Café virtuales cada vez que visitas un punto histórico o asistes a ferias y talleres. Sube de nivel en el ranking cultural y canjea reconocimientos.
+            Acumula Granos de Café virtuales cada vez que visitas un punto histórico o asistes a ferias y talleres. Sube
+            de nivel en el ranking cultural y canjea reconocimientos.
           </p>
         </div>
 
@@ -276,7 +305,8 @@
           <div class="feature-icon-box">🏺</div>
           <h3 class="feature-title">Protagonistas y MiPymes</h3>
           <p class="feature-text">
-            Conecta directamente con ceramistas, pintores, escultores y emprendedores locales. Revisa sus catálogos comerciales de productos típicos y agenda tus visitas.
+            Conecta directamente con ceramistas, pintores, escultores y emprendedores locales. Revisa sus catálogos
+            comerciales de productos típicos y agenda tus visitas.
           </p>
         </div>
 
@@ -285,7 +315,8 @@
           <div class="feature-icon-box">📅</div>
           <h3 class="feature-title">Agenda Cultural en Vivo</h3>
           <p class="feature-text">
-            Mantente al día con ferias de arte, exposiciones, bailes tradicionales y festivales folklóricos en las 10 ciudades. Confirma tu asistencia y gana puntos adicionales.
+            Mantente al día con ferias de arte, exposiciones, bailes tradicionales y festivales folklóricos en las 10
+            ciudades. Confirma tu asistencia y gana puntos adicionales.
           </p>
         </div>
 
@@ -294,7 +325,8 @@
           <div class="feature-icon-box">💼</div>
           <h3 class="feature-title">Inversión Estratégica</h3>
           <p class="feature-text">
-            Un portal dedicado para inversionistas y proyectos de impacto que buscan dinamizar la economía creativa y generar desarrollo sostenible en las comunidades.
+            Un portal dedicado para inversionistas y proyectos de impacto que buscan dinamizar la economía creativa y
+            generar desarrollo sostenible en las comunidades.
           </p>
         </div>
       </div>
@@ -308,7 +340,8 @@
         <span class="section-subtitle">Red Nacional</span>
         <h2 class="section-title">Las 10 Ciudades Creativas de Nicaragua</h2>
         <p class="section-lead">
-          Cada ciudad posee un legado ancestral, tradiciones vivas y expresiones creativas únicas listas para ser descubiertas en la app.
+          Cada ciudad posee un legado ancestral, tradiciones vivas y expresiones creativas únicas listas para ser
+          descubiertas en la app.
         </p>
       </div>
 
@@ -321,7 +354,8 @@
           </div>
           <h3 class="city-name">Estelí</h3>
           <div class="city-tagline">Diamante de las Segovias</div>
-          <p class="city-desc">Famosa por sus murales revolucionarios, arte callejero, música norteña y tradición tabacalera de calidad mundial.</p>
+          <p class="city-desc">Famosa por sus murales revolucionarios, arte callejero, música norteña y tradición
+            tabacalera de calidad mundial.</p>
         </div>
 
         <!-- 2. León -->
@@ -332,7 +366,8 @@
           </div>
           <h3 class="city-name">León</h3>
           <div class="city-tagline">Cuna de Poetas y Murales</div>
-          <p class="city-desc">Sede de la majestuosa Basílica Catedral, museos de arte contemporáneo, poesía dariana y fervor tradicional.</p>
+          <p class="city-desc">Sede de la majestuosa Basílica Catedral, museos de arte contemporáneo, poesía dariana y
+            fervor tradicional.</p>
         </div>
 
         <!-- 3. Nagarote -->
@@ -343,7 +378,8 @@
           </div>
           <h3 class="city-name">Nagarote</h3>
           <div class="city-tagline">Municipio Azul de Nicaragua</div>
-          <p class="city-desc">Reconocida por su pulcritud urbana, delicias gastronómicas como el quesillo tradicional y su calidez costera.</p>
+          <p class="city-desc">Reconocida por su pulcritud urbana, delicias gastronómicas como el quesillo tradicional y
+            su calidez costera.</p>
         </div>
 
         <!-- 4. Managua -->
@@ -354,7 +390,8 @@
           </div>
           <h3 class="city-name">Managua</h3>
           <div class="city-tagline">Metrópoli Creativa</div>
-          <p class="city-desc">Centro neurálgico de galerías, teatros nacionales, puerto Salvador Allende y convergencia cultural.</p>
+          <p class="city-desc">Centro neurálgico de galerías, teatros nacionales, puerto Salvador Allende y convergencia
+            cultural.</p>
         </div>
 
         <!-- 5. Masaya -->
@@ -365,7 +402,8 @@
           </div>
           <h3 class="city-name">Masaya</h3>
           <div class="city-tagline">Cuna del Folklore Nacional</div>
-          <p class="city-desc">Corazón de la marimba, bailes de negras, mercado de artesanías y talleres de hamacas y cuero.</p>
+          <p class="city-desc">Corazón de la marimba, bailes de negras, mercado de artesanías y talleres de hamacas y
+            cuero.</p>
         </div>
 
         <!-- 6. Granada -->
@@ -376,7 +414,8 @@
           </div>
           <h3 class="city-name">Granada</h3>
           <div class="city-tagline">La Gran Sultana</div>
-          <p class="city-desc">Arquitectura colonial pristina frente al Gran Lago Cocibolca, poetas insignes y rica gastronomía mestiza.</p>
+          <p class="city-desc">Arquitectura colonial pristina frente al Gran Lago Cocibolca, poetas insignes y rica
+            gastronomía mestiza.</p>
         </div>
 
         <!-- 7. San Juan de Oriente -->
@@ -387,7 +426,8 @@
           </div>
           <h3 class="city-name">San Juan de Oriente</h3>
           <div class="city-tagline">Cuna de la Cerámica</div>
-          <p class="city-desc">Maestros artesanos que preservan técnicas milenarias del barro precolombino con diseños geométricos admirables.</p>
+          <p class="city-desc">Maestros artesanos que preservan técnicas milenarias del barro precolombino con diseños
+            geométricos admirables.</p>
         </div>
 
         <!-- 8. Juigalpa -->
@@ -398,7 +438,8 @@
           </div>
           <h3 class="city-name">Juigalpa</h3>
           <div class="city-tagline">Tierra de Caracolitos</div>
-          <p class="city-desc">Riqueza arqueológica, monolitos chontaleños, museos prehistóricos y profundas tradiciones hípicas.</p>
+          <p class="city-desc">Riqueza arqueológica, monolitos chontaleños, museos prehistóricos y profundas tradiciones
+            hípicas.</p>
         </div>
 
         <!-- 9. Matagalpa -->
@@ -409,7 +450,8 @@
           </div>
           <h3 class="city-name">Matagalpa</h3>
           <div class="city-tagline">Capital del Café</div>
-          <p class="city-desc">Neblinas, montañas verdes, cafetales de altura, polkas y mazurcas que adornan las rutas de agroturismo.</p>
+          <p class="city-desc">Neblinas, montañas verdes, cafetales de altura, polkas y mazurcas que adornan las rutas
+            de agroturismo.</p>
         </div>
 
         <!-- 10. Bluefields -->
@@ -420,7 +462,8 @@
           </div>
           <h3 class="city-name">Bluefields</h3>
           <div class="city-tagline">Cultura y Ritmo Caribeño</div>
-          <p class="city-desc">Palo de Mayo, herencia afrodescendiente y de pueblos originarios, gastronomía con coco y diversidad multilingüe.</p>
+          <p class="city-desc">Palo de Mayo, herencia afrodescendiente y de pueblos originarios, gastronomía con coco y
+            diversidad multilingüe.</p>
         </div>
       </div>
     </div>
@@ -436,7 +479,8 @@
           </span>
           <h2 class="download-box-title">Lleva a Nicaragua en tu Bolsillo</h2>
           <p class="download-box-text">
-            Codice路 estará disponible en la tienda Google Play y en archivo APK de descarga directa para teléfonos Android. Sé el primero en experimentar las rutas culturales.
+            Codice路 estará disponible en la tienda Google Play y en archivo APK de descarga directa para teléfonos
+            Android. Sé el primero en experimentar las rutas culturales.
           </p>
 
           <div class="download-buttons-center">
@@ -444,10 +488,11 @@
             <button class="store-btn" data-open-modal="playStoreModal">
               <div class="store-btn-icon">
                 <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
-                  <path d="M3.6 1.8c-.3.3-.5.8-.5 1.4v17.6c0 .6.2 1.1.5 1.4l.1.1 9.9-9.9v-.2L3.7 1.7l-.1.1z" fill="#00e5ff"/>
-                  <path d="M16.9 15.6l-3.3-3.3v-.2l3.3-3.3.1.1 3.9 2.2c1.1.6 1.1 1.7 0 2.3l-4 2.2z" fill="#ffeb3b"/>
-                  <path d="M13.6 12.1L3.6 22.2c.4.4 1 .5 1.7.1l11.6-6.6-3.3-3.6z" fill="#ff3d00"/>
-                  <path d="M13.6 11.9l3.3-3.6L5.3 1.7c-.7-.4-1.3-.3-1.7.1l10 10.1z" fill="#00e676"/>
+                  <path d="M3.6 1.8c-.3.3-.5.8-.5 1.4v17.6c0 .6.2 1.1.5 1.4l.1.1 9.9-9.9v-.2L3.7 1.7l-.1.1z"
+                    fill="#00e5ff" />
+                  <path d="M16.9 15.6l-3.3-3.3v-.2l3.3-3.3.1.1 3.9 2.2c1.1.6 1.1 1.7 0 2.3l-4 2.2z" fill="#ffeb3b" />
+                  <path d="M13.6 12.1L3.6 22.2c.4.4 1 .5 1.7.1l11.6-6.6-3.3-3.6z" fill="#ff3d00" />
+                  <path d="M13.6 11.9l3.3-3.6L5.3 1.7c-.7-.4-1.3-.3-1.7.1l10 10.1z" fill="#00e676" />
                 </svg>
               </div>
               <div class="store-btn-text">
@@ -461,9 +506,15 @@
             <button class="store-btn apk-btn" data-open-modal="apkModal">
               <div class="store-btn-icon">
                 <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
-                  <path d="M6 18c0 .55.45 1 1 1h1v3.5c0 .83.67 1.5 1.5 1.5s1.5-.67 1.5-1.5V19h2v3.5c0 .83.67 1.5 1.5 1.5s1.5-.67 1.5-1.5V19h1c.55 0 1-.45 1-1V8H6v10z" fill="#10b981"/>
-                  <path d="M3.5 8C2.67 8 2 8.67 2 9.5v6c0 .83.67 1.5 1.5 1.5S5 16.33 5 15.5v-6C5 8.67 4.33 8 3.5 8zm17 0c-.83 0-1.5.67-1.5 1.5v6c0 .83.67 1.5 1.5 1.5s1.5-.67 1.5-1.5v-6c0-.83-.67-1.5-1.5-1.5z" fill="#10b981"/>
-                  <path d="M7 6.8h10V5.5c0-1.93-1.57-3.5-3.5-3.5h-3C8.57 2 7 3.57 7 5.5v1.3zm3.5-2.8c.28 0 .5.22.5.5s-.22.5-.5.5-.5-.22-.5-.5.22-.5.5-.5zm3 0c.28 0 .5.22.5.5s-.22.5-.5.5-.5-.22-.5-.5.22-.5.5-.5z" fill="#10b981"/>
+                  <path
+                    d="M6 18c0 .55.45 1 1 1h1v3.5c0 .83.67 1.5 1.5 1.5s1.5-.67 1.5-1.5V19h2v3.5c0 .83.67 1.5 1.5 1.5s1.5-.67 1.5-1.5V19h1c.55 0 1-.45 1-1V8H6v10z"
+                    fill="#10b981" />
+                  <path
+                    d="M3.5 8C2.67 8 2 8.67 2 9.5v6c0 .83.67 1.5 1.5 1.5S5 16.33 5 15.5v-6C5 8.67 4.33 8 3.5 8zm17 0c-.83 0-1.5.67-1.5 1.5v6c0 .83.67 1.5 1.5 1.5s1.5-.67 1.5-1.5v-6c0-.83-.67-1.5-1.5-1.5z"
+                    fill="#10b981" />
+                  <path
+                    d="M7 6.8h10V5.5c0-1.93-1.57-3.5-3.5-3.5h-3C8.57 2 7 3.57 7 5.5v1.3zm3.5-2.8c.28 0 .5.22.5.5s-.22.5-.5.5-.5-.22-.5-.5.22-.5.5-.5zm3 0c.28 0 .5.22.5.5s-.22.5-.5.5-.5-.22-.5-.5.22-.5.5-.5z"
+                    fill="#10b981" />
                 </svg>
               </div>
               <div class="store-btn-text">
@@ -479,7 +530,8 @@
             <input type="email" class="notify-input" placeholder="Ingresa tu correo electrónico..." required>
             <button type="submit" class="notify-btn">Notificarme al Lanzar</button>
           </form>
-          <p class="notify-note">Sin spam. Solo te escribiremos cuando el archivo APK y la ficha de Google Play estén disponibles.</p>
+          <p class="notify-note">Sin spam. Solo te escribiremos cuando el archivo APK y la ficha de Google Play estén
+            disponibles.</p>
         </div>
       </div>
     </div>
@@ -495,7 +547,8 @@
             <div class="brand-name">Codice<span class="brand-kanji">路</span></div>
           </div>
           <p>
-            Plataforma digital para la Red Nacional de Ciudades Creativas y Turismo Cultural de Nicaragua. Conectando riqueza histórica, artesanos y viajeros de todo el mundo.
+            Plataforma digital para la Red Nacional de Ciudades Creativas y Turismo Cultural de Nicaragua. Conectando
+            riqueza histórica, artesanos y viajeros de todo el mundo.
           </p>
         </div>
 
@@ -512,8 +565,10 @@
         <div class="footer-col">
           <h4>Legal & Normativa</h4>
           <ul class="footer-links">
-            <li><a href="#terminos" data-open-modal="legalModal" data-target-tab="terminosApp">Términos y Condiciones</a></li>
-            <li><a href="#privacidad" data-open-modal="legalModal" data-target-tab="privacidadApp">Términos de Uso y Privacidad</a></li>
+            <li><a href="#terminos" data-open-modal="legalModal" data-target-tab="terminosApp">Términos y
+                Condiciones</a></li>
+            <li><a href="#privacidad" data-open-modal="legalModal" data-target-tab="privacidadApp">Términos de Uso y
+                Privacidad</a></li>
             <li><a href="#" data-open-modal="apkModal">Política de Descarga APK</a></li>
           </ul>
         </div>
@@ -530,7 +585,8 @@
 
       <div class="footer-bottom">
         <div>
-          &copy; 2026 Codice<span style="color:var(--accent-gold);">路</span> · Circuitos Creativos de Nicaragua. Todos los derechos reservados.
+          &copy; 2026 Codice<span style="color:var(--accent-gold);">路</span> · Circuitos Creativos de Nicaragua. Todos
+          los derechos reservados.
         </div>
         <div class="footer-bottom-links">
           <a href="#terminos" data-open-modal="legalModal" data-target-tab="terminosApp">Términos</a>
@@ -551,10 +607,11 @@
         <div class="modal-title-group">
           <div class="modal-icon icon-gold">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-              <path d="M3.6 1.8c-.3.3-.5.8-.5 1.4v17.6c0 .6.2 1.1.5 1.4l.1.1 9.9-9.9v-.2L3.7 1.7l-.1.1z" fill="#00e5ff"/>
-              <path d="M16.9 15.6l-3.3-3.3v-.2l3.3-3.3.1.1 3.9 2.2c1.1.6 1.1 1.7 0 2.3l-4 2.2z" fill="#ffeb3b"/>
-              <path d="M13.6 12.1L3.6 22.2c.4.4 1 .5 1.7.1l11.6-6.6-3.3-3.6z" fill="#ff3d00"/>
-              <path d="M13.6 11.9l3.3-3.6L5.3 1.7c-.7-.4-1.3-.3-1.7.1l10 10.1z" fill="#00e676"/>
+              <path d="M3.6 1.8c-.3.3-.5.8-.5 1.4v17.6c0 .6.2 1.1.5 1.4l.1.1 9.9-9.9v-.2L3.7 1.7l-.1.1z"
+                fill="#00e5ff" />
+              <path d="M16.9 15.6l-3.3-3.3v-.2l3.3-3.3.1.1 3.9 2.2c1.1.6 1.1 1.7 0 2.3l-4 2.2z" fill="#ffeb3b" />
+              <path d="M13.6 12.1L3.6 22.2c.4.4 1 .5 1.7.1l11.6-6.6-3.3-3.6z" fill="#ff3d00" />
+              <path d="M13.6 11.9l3.3-3.6L5.3 1.7c-.7-.4-1.3-.3-1.7.1l10 10.1z" fill="#00e676" />
             </svg>
           </div>
           <div>
@@ -569,12 +626,15 @@
           <strong>¡Codice路 estará disponible muy pronto en Google Play!</strong>
         </p>
         <p>
-          La aplicación móvil nativa se encuentra en proceso de validación en Google Play Console para garantizar la máxima seguridad, rendimiento y compatibilidad con las últimas versiones de Android.
+          La aplicación móvil nativa se encuentra en proceso de validación en Google Play Console para garantizar la
+          máxima seguridad, rendimiento y compatibilidad con las últimas versiones de Android.
         </p>
-        <div style="background:rgba(245,158,11,0.08); border:1px solid var(--glass-border-gold); padding:1rem; border-radius:12px; margin:1.2rem 0;">
+        <div
+          style="background:rgba(245,158,11,0.08); border:1px solid var(--glass-border-gold); padding:1rem; border-radius:12px; margin:1.2rem 0;">
           <h5 style="color:var(--accent-gold-light); margin-bottom:0.3rem;">¿Quieres ser el primero en descargarla?</h5>
           <p style="font-size:0.88rem; margin:0;">
-            Déjanos tu correo y te enviaremos el enlace directo de descarga e invitación beta tan pronto sea liberada en la tienda.
+            Déjanos tu correo y te enviaremos el enlace directo de descarga e invitación beta tan pronto sea liberada en
+            la tienda.
           </p>
         </div>
 
@@ -596,13 +656,19 @@
         <div class="modal-title-group">
           <div class="modal-icon icon-emerald">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-              <path d="M6 18c0 .55.45 1 1 1h1v3.5c0 .83.67 1.5 1.5 1.5s1.5-.67 1.5-1.5V19h2v3.5c0 .83.67 1.5 1.5 1.5s1.5-.67 1.5-1.5V19h1c.55 0 1-.45 1-1V8H6v10z" fill="#10b981"/>
-              <path d="M3.5 8C2.67 8 2 8.67 2 9.5v6c0 .83.67 1.5 1.5 1.5S5 16.33 5 15.5v-6C5 8.67 4.33 8 3.5 8zm17 0c-.83 0-1.5.67-1.5 1.5v6c0 .83.67 1.5 1.5 1.5s1.5-.67 1.5-1.5v-6c0-.83-.67-1.5-1.5-1.5z" fill="#10b981"/>
+              <path
+                d="M6 18c0 .55.45 1 1 1h1v3.5c0 .83.67 1.5 1.5 1.5s1.5-.67 1.5-1.5V19h2v3.5c0 .83.67 1.5 1.5 1.5s1.5-.67 1.5-1.5V19h1c.55 0 1-.45 1-1V8H6v10z"
+                fill="#10b981" />
+              <path
+                d="M3.5 8C2.67 8 2 8.67 2 9.5v6c0 .83.67 1.5 1.5 1.5S5 16.33 5 15.5v-6C5 8.67 4.33 8 3.5 8zm17 0c-.83 0-1.5.67-1.5 1.5v6c0 .83.67 1.5 1.5 1.5s1.5-.67 1.5-1.5v-6c0-.83-.67-1.5-1.5-1.5z"
+                fill="#10b981" />
             </svg>
           </div>
           <div>
             <h3 class="modal-title">Descarga Directa de APK</h3>
-            <span class="legal-badge" style="background:rgba(16,185,129,0.15); color:#34d399; border-color:var(--glass-border-emerald); margin:0;">Versión v1.0.0 (Release Candidate)</span>
+            <span class="legal-badge"
+              style="background:rgba(16,185,129,0.15); color:#34d399; border-color:var(--glass-border-emerald); margin:0;">Versión
+              v1.0.0 (Release Candidate)</span>
           </div>
         </div>
         <button class="modal-close-btn" data-close-modal>&times;</button>
@@ -612,23 +678,27 @@
           <strong>Compilación de producción en proceso</strong>
         </p>
         <p>
-          El paquete instalable <code>.apk</code> oficial de Codice路 está finalizando su suite de compilación segura y pruebas de integración con el backend Django.
+          El paquete instalable <code>.apk</code> oficial de Codice路 está finalizando su suite de compilación segura y
+          pruebas de integración con el backend Django.
         </p>
         <ul style="margin-left:1.5rem; margin-bottom:1.5rem; color:var(--text-muted);">
           <li>Paquete firmado con SHA-256 para integridad de la aplicación.</li>
           <li>Optimizado para Android 8.0 Oreo en adelante.</li>
           <li>Soporte de geolocalización GPS de precisión e inicio de sesión con Google.</li>
         </ul>
-        <div style="background:rgba(16,185,129,0.08); border:1px solid var(--glass-border-emerald); padding:1rem; border-radius:12px;">
+        <div
+          style="background:rgba(16,185,129,0.08); border:1px solid var(--glass-border-emerald); padding:1rem; border-radius:12px;">
           <h5 style="color:#34d399; margin-bottom:0.3rem;">Acceso anticipado a la APK:</h5>
           <p style="font-size:0.88rem; margin:0;">
-            Suscríbete con tu correo y recibirás el enlace de descarga directa en cuanto se publique el archivo binario oficial.
+            Suscríbete con tu correo y recibirás el enlace de descarga directa en cuanto se publique el archivo binario
+            oficial.
           </p>
         </div>
 
         <form class="notify-form" style="margin-top:1.5rem;">
           <input type="email" class="notify-input" placeholder="Tu correo electrónico..." required>
-          <button type="submit" class="notify-btn" style="background:linear-gradient(135deg,#059669,#10b981);">Registrar para APK</button>
+          <button type="submit" class="notify-btn" style="background:linear-gradient(135deg,#059669,#10b981);">Registrar
+            para APK</button>
         </form>
       </div>
       <div class="modal-footer">
@@ -663,65 +733,109 @@
           <div class="legal-document">
             <span class="legal-badge">Términos y Condiciones Generales</span>
             <p>
-              Bienvenido a <strong>Codice路</strong>. Los presentes Términos y Condiciones regulan el acceso, descarga, navegación y utilización de la aplicación móvil Codice路, su sitio web y los servicios de la API asociados, desarrollados para la promoción de la Red Nacional de Ciudades Creativas de Nicaragua. Al instalar, registrarse o utilizar la plataforma, el usuario declara haber leído, comprendido y aceptado plenamente estos términos.
+              Bienvenido a <strong>Codice路</strong>. Los presentes Términos y Condiciones regulan el acceso, descarga,
+              navegación y utilización de la aplicación móvil Codice路, su sitio web y los servicios de la API asociados,
+              desarrollados para la promoción de la Red Nacional de Ciudades Creativas de Nicaragua. Al instalar,
+              registrarse o utilizar la plataforma, el usuario declara haber leído, comprendido y aceptado plenamente
+              estos términos.
             </p>
 
             <h4>1. Objeto y Descripción del Servicio</h4>
             <p>
-              Codice路 es una plataforma tecnológica orientada a conectar a turistas nacionales e internacionales con los circuitos creativos, históricos, gastronómicos y culturales de las 10 Ciudades Creativas de Nicaragua (Estelí, León, Nagarote, Managua, Masaya, Granada, San Juan de Oriente, Juigalpa, Matagalpa y Bluefields). La aplicación permite consultar mapas temáticos, localizar puntos de interés (POI), registrar visitas en tiempo real, interactuar con publicaciones comunitarias y conocer la oferta de protagonistas y empresas locales.
+              Codice路 es una plataforma tecnológica orientada a conectar a turistas nacionales e internacionales con los
+              circuitos creativos, históricos, gastronómicos y culturales de las 10 Ciudades Creativas de Nicaragua
+              (Estelí, León, Nagarote, Managua, Masaya, Granada, San Juan de Oriente, Juigalpa, Matagalpa y Bluefields).
+              La aplicación permite consultar mapas temáticos, localizar puntos de interés (POI), registrar visitas en
+              tiempo real, interactuar con publicaciones comunitarias y conocer la oferta de protagonistas y empresas
+              locales.
             </p>
 
             <h4>2. Registro de Usuario y Seguridad de la Cuenta</h4>
             <p>
-              El acceso a determinadas funciones (como la validación de visitas por GPS, acumulación de recompensas y publicación de comentarios) requiere la creación de una cuenta de usuario mediante correo electrónico y contraseña o mediante autenticación federada con <strong>Google OAuth</strong>. El usuario es el único responsable de mantener la confidencialidad de sus credenciales y de todas las actividades efectuadas bajo su cuenta. Codice路 se reserva el derecho de suspender o cancelar cuentas que incumplan estas condiciones o que utilicen datos falsificados.
+              El acceso a determinadas funciones (como la validación de visitas por GPS, acumulación de recompensas y
+              publicación de comentarios) requiere la creación de una cuenta de usuario mediante correo electrónico y
+              contraseña o mediante autenticación federada con <strong>Google OAuth</strong>. El usuario es el único
+              responsable de mantener la confidencialidad de sus credenciales y de todas las actividades efectuadas bajo
+              su cuenta. Codice路 se reserva el derecho de suspender o cancelar cuentas que incumplan estas condiciones o
+              que utilicen datos falsificados.
             </p>
 
             <h4>3. Uso de la Geolocalización y Validación de Visitas (Fórmula Haversine)</h4>
             <p>
-              Para validar una visita a un punto de interés o confirmar la asistencia a un evento cultural, el usuario debe otorgar permisos de acceso a la ubicación por satélite (GPS) de su dispositivo móvil. Codice路 implementa un algoritmo matemático de validación geográfica basado en la <strong>fórmula de Haversine</strong>, que calcula la distancia ortodrómica entre las coordenadas enviadas por el dispositivo y las coordenadas oficiales del sitio:
+              Para validar una visita a un punto de interés o confirmar la asistencia a un evento cultural, el usuario
+              debe otorgar permisos de acceso a la ubicación por satélite (GPS) de su dispositivo móvil. Codice路
+              implementa un algoritmo matemático de validación geográfica basado en la <strong>fórmula de
+                Haversine</strong>, que calcula la distancia ortodrómica entre las coordenadas enviadas por el
+              dispositivo y las coordenadas oficiales del sitio:
             </p>
             <ul>
-              <li>La visita se considerará válida únicamente si la distancia calculada se encuentra dentro del radio de tolerancia preestablecido para dicho punto (generalmente entre 100 y 300 metros).</li>
-              <li>Queda terminantemente prohibido el uso de herramientas de suplantación de ubicación (Fake GPS, VPNs con spoofing, emuladores modificados o scripts automatizados). La detección de manipulaciones acarreará la anulación de visitas y la posible inhabilitación permanente de la cuenta.</li>
+              <li>La visita se considerará válida únicamente si la distancia calculada se encuentra dentro del radio de
+                tolerancia preestablecido para dicho punto (generalmente entre 100 y 300 metros).</li>
+              <li>Queda terminantemente prohibido el uso de herramientas de suplantación de ubicación (Fake GPS, VPNs
+                con spoofing, emuladores modificados o scripts automatizados). La detección de manipulaciones acarreará
+                la anulación de visitas y la posible inhabilitación permanente de la cuenta.</li>
             </ul>
 
             <h4>4. Sistema de Gamificación y Recompensas ("Granos de Café")</h4>
             <p>
-              Los usuarios pueden acumular puntos de fidelidad denominados <strong>"Granos de Café"</strong> al completar visitas a circuitos creativos, asistir a eventos culturales o interactuar de manera constructiva en la comunidad.
+              Los usuarios pueden acumular puntos de fidelidad denominados <strong>"Granos de Café"</strong> al
+              completar visitas a circuitos creativos, asistir a eventos culturales o interactuar de manera constructiva
+              en la comunidad.
             </p>
             <ul>
-              <li><strong>Naturaleza No Monetaria:</strong> Los "Granos de Café" son unidades de reconocimiento virtual dentro de la aplicación. No constituyen dinero de curso legal, títulos valores, criptoactivos ni activos financieros reembolsables en efectivo.</li>
-              <li><strong>Beneficios y Reconocimientos:</strong> Los puntos podrán ser utilizados para desbloquear medallas virtuales, niveles de explorador y canjear posibles beneficios simbólicos o descuentos otorgados voluntariamente por protagonistas locales aliados, sujetos a disponibilidad.</li>
+              <li><strong>Naturaleza No Monetaria:</strong> Los "Granos de Café" son unidades de reconocimiento virtual
+                dentro de la aplicación. No constituyen dinero de curso legal, títulos valores, criptoactivos ni activos
+                financieros reembolsables en efectivo.</li>
+              <li><strong>Beneficios y Reconocimientos:</strong> Los puntos podrán ser utilizados para desbloquear
+                medallas virtuales, niveles de explorador y canjear posibles beneficios simbólicos o descuentos
+                otorgados voluntariamente por protagonistas locales aliados, sujetos a disponibilidad.</li>
             </ul>
 
             <h4>5. Contenido Generado por los Usuarios y Reseñas</h4>
             <p>
-              Los usuarios pueden publicar opiniones, valoraciones y fotografías en la galería comunitaria. El usuario garantiza que es titular o tiene autorización suficiente sobre cualquier contenido compartido. Queda prohibido publicar contenido difamatorio, obsceno, discriminatorio, que viole derechos de propiedad intelectual de terceros o que afecte el patrimonio cultural de las comunidades. Codice路 se reserva el derecho de moderar, ocultar o eliminar cualquier contenido que contravenga estas directrices.
+              Los usuarios pueden publicar opiniones, valoraciones y fotografías en la galería comunitaria. El usuario
+              garantiza que es titular o tiene autorización suficiente sobre cualquier contenido compartido. Queda
+              prohibido publicar contenido difamatorio, obsceno, discriminatorio, que viole derechos de propiedad
+              intelectual de terceros o que afecte el patrimonio cultural de las comunidades. Codice路 se reserva el
+              derecho de moderar, ocultar o eliminar cualquier contenido que contravenga estas directrices.
             </p>
 
             <h4>6. Directorio de Protagonistas, MiPymes y Enlaces de Terceros</h4>
             <p>
-              La plataforma exhibe información, catálogos comerciales y datos de contacto de artesanos, artistas y empresas pertenecientes a la Red de Ciudades Creativas. Codice路 actúa como un canal de divulgación y promoción cultural; no es parte ni interviene en las transacciones comerciales, compras o contratos de servicios pactados de forma privada entre el usuario y los negocios locales.
+              La plataforma exhibe información, catálogos comerciales y datos de contacto de artesanos, artistas y
+              empresas pertenecientes a la Red de Ciudades Creativas. Codice路 actúa como un canal de divulgación y
+              promoción cultural; no es parte ni interviene en las transacciones comerciales, compras o contratos de
+              servicios pactados de forma privada entre el usuario y los negocios locales.
             </p>
 
             <h4>7. Oportunidades de Inversión</h4>
             <p>
-              La sección de oportunidades de inversión turística tiene carácter exclusivamente informativo y de fomento del desarrollo económico local. Ninguna publicación debe interpretarse como asesoramiento financiero o invitación formal vinculante a la captación de fondos regulados.
+              La sección de oportunidades de inversión turística tiene carácter exclusivamente informativo y de fomento
+              del desarrollo económico local. Ninguna publicación debe interpretarse como asesoramiento financiero o
+              invitación formal vinculante a la captación de fondos regulados.
             </p>
 
             <h4>8. Propiedad Intelectual</h4>
             <p>
-              El nombre Codice路, logotipos, código fuente del backend y frontend, bases de datos, diseños gráficos, iconografía y mapas son propiedad de los titulares del proyecto o se utilizan bajo las licencias correspondientes. Se prohíbe su reproducción, distribución o ingeniería inversa sin autorización previa y por escrito.
+              El nombre Codice路, logotipos, código fuente del backend y frontend, bases de datos, diseños gráficos,
+              iconografía y mapas son propiedad de los titulares del proyecto o se utilizan bajo las licencias
+              correspondientes. Se prohíbe su reproducción, distribución o ingeniería inversa sin autorización previa y
+              por escrito.
             </p>
 
             <h4>9. Exclusión de Garantías y Limitación de Responsabilidad</h4>
             <p>
-              Codice路 se proporciona "tal cual" y según disponibilidad. Aunque realizamos los máximos esfuerzos para garantizar la precisión de la información y el funcionamiento continuo del servicio, no garantizamos la disponibilidad ininterrumpida de la app ni la exactitud absoluta de horarios o eventos organizados por terceros independientes.
+              Codice路 se proporciona "tal cual" y según disponibilidad. Aunque realizamos los máximos esfuerzos para
+              garantizar la precisión de la información y el funcionamiento continuo del servicio, no garantizamos la
+              disponibilidad ininterrumpida de la app ni la exactitud absoluta de horarios o eventos organizados por
+              terceros independientes.
             </p>
 
             <h4>10. Legislación Aplicable y Jurisdicción</h4>
             <p>
-              Estos Términos y Condiciones se rigen e interpretan de conformidad con las leyes vigentes de la <strong>República de Nicaragua</strong>. Cualquier controversia derivada del uso de la plataforma será sometida a los tribunales competentes de la República de Nicaragua.
+              Estos Términos y Condiciones se rigen e interpretan de conformidad con las leyes vigentes de la
+              <strong>República de Nicaragua</strong>. Cualquier controversia derivada del uso de la plataforma será
+              sometida a los tribunales competentes de la República de Nicaragua.
             </p>
           </div>
         </div>
@@ -729,62 +843,91 @@
         <!-- Pestaña 2: Términos de Uso y Política de Privacidad -->
         <div class="tab-content" id="privacidadApp">
           <div class="legal-document">
-            <span class="legal-badge" style="background:rgba(16,185,129,0.15); color:#34d399; border-color:var(--glass-border-emerald);">Política de Privacidad y Tratamiento de Datos</span>
+            <span class="legal-badge"
+              style="background:rgba(16,185,129,0.15); color:#34d399; border-color:var(--glass-border-emerald);">Política
+              de Privacidad y Tratamiento de Datos</span>
             <p>
-              En <strong>Codice路</strong> nos tomamos muy en serio la privacidad y la protección de los datos de nuestros usuarios. Esta política detalla qué información recopilamos, con qué finalidad la tratamos y cuáles son los derechos que te asisten.
+              En <strong>Codice路</strong> nos tomamos muy en serio la privacidad y la protección de los datos de
+              nuestros usuarios. Esta política detalla qué información recopilamos, con qué finalidad la tratamos y
+              cuáles son los derechos que te asisten.
             </p>
 
             <h4>1. Datos que Recopilamos</h4>
-            <p>Para brindarte los servicios de la aplicación móvil y la plataforma web, recopilamos las siguientes categorías de datos:</p>
+            <p>Para brindarte los servicios de la aplicación móvil y la plataforma web, recopilamos las siguientes
+              categorías de datos:</p>
             <ul>
-              <li><strong>Datos de Identificación y Contacto:</strong> Nombre completo, nombre de usuario, dirección de correo electrónico, foto de perfil y país de origen (proporcionados al registrarte o sincronizar con Google).</li>
-              <li><strong>Datos de Geolocalización Precisa:</strong> Coordenadas de latitud y longitud capturadas exclusivamente en el momento en que solicitas validar tu visita a un punto de interés o evento. <em>No realizamos rastreo en segundo plano ni almacenamos tu historial continuo de desplazamientos fuera de los puntos validados.</em></li>
-              <li><strong>Contenido Multimedia y Reseñas:</strong> Fotografías tomadas o subidas por el usuario para reseñar puntos de interés y los comentarios publicados voluntariamente en la plataforma.</li>
-              <li><strong>Datos Técnicos de Uso:</strong> Dirección IP, modelo de dispositivo, versión del sistema operativo y tokens de sesión JWT necesarios para mantener la seguridad y autenticación.</li>
+              <li><strong>Datos de Identificación y Contacto:</strong> Nombre completo, nombre de usuario, dirección de
+                correo electrónico, foto de perfil y país de origen (proporcionados al registrarte o sincronizar con
+                Google).</li>
+              <li><strong>Datos de Geolocalización Precisa:</strong> Coordenadas de latitud y longitud capturadas
+                exclusivamente en el momento en que solicitas validar tu visita a un punto de interés o evento. <em>No
+                  realizamos rastreo en segundo plano ni almacenamos tu historial continuo de desplazamientos fuera de
+                  los puntos validados.</em></li>
+              <li><strong>Contenido Multimedia y Reseñas:</strong> Fotografías tomadas o subidas por el usuario para
+                reseñar puntos de interés y los comentarios publicados voluntariamente en la plataforma.</li>
+              <li><strong>Datos Técnicos de Uso:</strong> Dirección IP, modelo de dispositivo, versión del sistema
+                operativo y tokens de sesión JWT necesarios para mantener la seguridad y autenticación.</li>
             </ul>
 
             <h4>2. Finalidad del Tratamiento de los Datos</h4>
             <p>Los datos personales son tratados con las siguientes finalidades legítimas:</p>
             <ul>
               <li>Gestionar tu cuenta de usuario y permitir el acceso seguro mediante tokens JWT.</li>
-              <li>Calcular de manera puntual la distancia geográfica con la fórmula Haversine para otorgar las recompensas ("Granos de Café") por visitas efectivas.</li>
-              <li>Generar estadísticas anónimas y agregadas sobre el flujo de visitantes en los circuitos creativos, con el fin de fortalecer el turismo sostenible de las ciudades.</li>
+              <li>Calcular de manera puntual la distancia geográfica con la fórmula Haversine para otorgar las
+                recompensas ("Granos de Café") por visitas efectivas.</li>
+              <li>Generar estadísticas anónimas y agregadas sobre el flujo de visitantes en los circuitos creativos, con
+                el fin de fortalecer el turismo sostenible de las ciudades.</li>
               <li>Proteger la plataforma contra accesos fraudulentos, falsificación de ubicación y abusos.</li>
             </ul>
 
             <h4>3. Autenticación con Terceros (Google OAuth)</h4>
             <p>
-              Si decides iniciar sesión a través de <strong>Google Sign-In</strong>, recibiremos de Google únicamente tu nombre, dirección de correo electrónico y foto de perfil pública para crear o sincronizar tu cuenta en Codice路. En ningún momento accedemos a tus contraseñas de Google, contactos u otra información privada almacenada en tu cuenta de Google.
+              Si decides iniciar sesión a través de <strong>Google Sign-In</strong>, recibiremos de Google únicamente tu
+              nombre, dirección de correo electrónico y foto de perfil pública para crear o sincronizar tu cuenta en
+              Codice路. En ningún momento accedemos a tus contraseñas de Google, contactos u otra información privada
+              almacenada en tu cuenta de Google.
             </p>
 
             <h4>4. Almacenamiento y Seguridad de los Datos</h4>
             <p>
-              Toda la información se transmite mediante protocolos criptográficos seguros (HTTPS / TLS). Las contraseñas se almacenan mediante funciones de derivación criptográfica unidireccional (hashing seguro PBKDF2/Argon2). Los archivos multimedia se almacenan en servidores dedicados o contenedores en la nube con controles de acceso restringidos.
+              Toda la información se transmite mediante protocolos criptográficos seguros (HTTPS / TLS). Las contraseñas
+              se almacenan mediante funciones de derivación criptográfica unidireccional (hashing seguro PBKDF2/Argon2).
+              Los archivos multimedia se almacenan en servidores dedicados o contenedores en la nube con controles de
+              acceso restringidos.
             </p>
 
             <h4>5. Compartición de Datos con Terceros</h4>
             <p>
-              <strong>No vendemos, alquilamos ni comercializamos tus datos personales a empresas publicitarias o terceros ajenos.</strong> Únicamente se podrá compartir información estadística anonimizada con los comités de la Red Nacional de Ciudades Creativas para evaluar el impacto del turismo cultural, sin revelar en ningún caso datos identificativos de usuarios individuales.
+              <strong>No vendemos, alquilamos ni comercializamos tus datos personales a empresas publicitarias o
+                terceros ajenos.</strong> Únicamente se podrá compartir información estadística anonimizada con los
+              comités de la Red Nacional de Ciudades Creativas para evaluar el impacto del turismo cultural, sin revelar
+              en ningún caso datos identificativos de usuarios individuales.
             </p>
 
             <h4>6. Derechos de los Usuarios (Acceso, Rectificación y Supresión)</h4>
             <p>
-              En cualquier momento, puedes ejercer tus derechos para acceder a los datos que conservamos sobre ti, rectificar información inexacta o solicitar la eliminación definitiva de tu cuenta y de los datos asociados enviando una solicitud a través de los canales de soporte.
+              En cualquier momento, puedes ejercer tus derechos para acceder a los datos que conservamos sobre ti,
+              rectificar información inexacta o solicitar la eliminación definitiva de tu cuenta y de los datos
+              asociados enviando una solicitud a través de los canales de soporte.
             </p>
 
             <h4>7. Menores de Edad</h4>
             <p>
-              La plataforma no recopila intencionadamente datos de menores de 14 años sin el consentimiento o supervisión de sus padres o tutores legales.
+              La plataforma no recopila intencionadamente datos de menores de 14 años sin el consentimiento o
+              supervisión de sus padres o tutores legales.
             </p>
 
             <h4>8. Actualizaciones a esta Política</h4>
             <p>
-              Podremos actualizar periódicamente esta política para reflejar mejoras funcionales o cambios legislativos. Cualquier modificación sustancial será notificada a través de la aplicación o en este sitio web.
+              Podremos actualizar periódicamente esta política para reflejar mejoras funcionales o cambios legislativos.
+              Cualquier modificación sustancial será notificada a través de la aplicación o en este sitio web.
             </p>
 
             <h4>9. Contacto y Soporte</h4>
             <p>
-              Para dudas, consultas o solicitudes relacionadas con el tratamiento de tus datos personales, puedes comunicarte con el equipo responsable a través del correo de soporte técnico oficial o mediante el repositorio del proyecto.
+              Para dudas, consultas o solicitudes relacionadas con el tratamiento de tus datos personales, puedes
+              comunicarte con el equipo responsable a través del correo de soporte técnico oficial o mediante el
+              repositorio del proyecto.
             </p>
           </div>
         </div>
@@ -803,4 +946,5 @@
   <!-- Scripts -->
   <script src="{% static 'js/landing.js' %}"></script>
 </body>
+
 </html>
