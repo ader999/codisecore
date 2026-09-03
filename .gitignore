@@ -3,7 +3,8 @@ __pycache__/
 *.pyc
 *.sqlite3
 media/
-static/
 .idea/
 .env
 staticfiles/
+static/admin/
+static/rest_framework/

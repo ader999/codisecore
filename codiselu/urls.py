@@ -22,7 +22,8 @@ from .views import (
     InversionTuristaViewSet,
     EventoViewSet,
     PublicacionViewSet,
-    ComentarioPublicacionViewSet
+    ComentarioPublicacionViewSet,
+    LandingPageView
 )
 
 router = DefaultRouter()
@@ -43,7 +44,10 @@ router.register(r'publicaciones', PublicacionViewSet, basename='publicacion')
 router.register(r'comentarios-publicaciones', ComentarioPublicacionViewSet, basename='comentario-publicacion')
 
 urlpatterns = [
-    path('', RedirectView.as_view(url='/api/', permanent=False)),
+    path('', LandingPageView.as_view(), name='landing'),
+    path('landing/', LandingPageView.as_view(), name='landing_page'),
+    path('terminos/', LandingPageView.as_view(), name='terminos_condiciones'),
+    path('privacidad/', LandingPageView.as_view(), name='terminos_privacidad'),
     path('admin/', admin.site.urls),
     path('api/auth/register/', RegisterView.as_view(), name='auth_register'),
     path('api/auth/login/', LoginView.as_view(), name='auth_login'),
