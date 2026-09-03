@@ -23,6 +23,48 @@ Para soportar la subida masiva de imágenes (hasta **10 fotos por publicación**
 * **Gunicorn Application Server (`Dockerfile`):**
   * `--timeout 300`: Mantiene los workers ejecutando durante cargas de archivos grandes.
 
+### 1.2 Soporte Multi-idioma (Español, Inglés y Chino Mandarín)
+La API cuenta con traducción automática de contenido dinámico (Ciudades, Circuitos, Puntos de Interés, Eventos, Empresas, Oportunidades de Inversión y Datos Históricos) para turistas internacionales.
+
+#### ¿Cómo solicitar el idioma desde la App Móvil o Web?
+Existen dos formas estándar y totalmente compatibles:
+
+1. **Vía Cabecera HTTP `Accept-Language` (Recomendado):**
+   * Inglés: `Accept-Language: en`
+   * Mandarín: `Accept-Language: zh` o `Accept-Language: zh-CN` o `Accept-Language: zh-Hans`
+   * Español: `Accept-Language: es` (o sin cabecera)
+
+2. **Vía Parámetro Query en la URL (`?lang=` o `?idioma=`):**
+   * Inglés: `GET /api/ciudades/?lang=en`
+   * Mandarín: `GET /api/ciudades/?lang=zh`
+   * Español: `GET /api/ciudades/?lang=es`
+
+#### Formato de Respuesta
+Los campos principales (`nombre`, `descripcion`, `titulo`, `contenido`, `ciudad_nombre`, etc.) se transforman automáticamente al idioma solicitado sin alterar los nombres de las claves JSON. Además, se incluye el nodo `traducciones` con los 3 idiomas por si la app móvil desea cachearlos localmente:
+
+```json
+{
+  "id": 1,
+  "nombre": "Colonial Granada",
+  "descripcion": "Beautiful colonial city on the shores of the Great Lake of Nicaragua.",
+  "latitud_centro": 11.9299,
+  "longitud_centro": -85.9560,
+  "traducciones": {
+    "es": {
+      "nombre": "Granada Colonial",
+      "descripcion": "Hermosa ciudad colonial a orillas del Gran Lago de Nicaragua."
+    },
+    "en": {
+      "nombre": "Colonial Granada",
+      "descripcion": "Beautiful colonial city on the shores of the Great Lake of Nicaragua."
+    },
+    "zh": {
+      "nombre": "殖民地格拉纳达",
+      "descripcion": "尼加拉瓜大湖畔美丽的殖民城市。"
+    }
+  }
+}
+```
 
 ---
 
