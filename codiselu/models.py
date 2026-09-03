@@ -14,7 +14,11 @@ class User(AbstractUser):
 
 class Ciudad(models.Model):
     nombre = models.CharField(max_length=100, unique=True)
+    nombre_en = models.CharField(max_length=100, blank=True, null=True, help_text="Traducción al inglés")
+    nombre_zh = models.CharField(max_length=100, blank=True, null=True, help_text="Traducción al mandarín")
     descripcion = models.TextField()
+    descripcion_en = models.TextField(blank=True, null=True, help_text="Traducción al inglés")
+    descripcion_zh = models.TextField(blank=True, null=True, help_text="Traducción al mandarín")
     imagen_portada = models.ImageField(upload_to='ciudades/portadas/', blank=True, null=True)
     latitud_centro = models.FloatField()
     longitud_centro = models.FloatField()
@@ -24,6 +28,11 @@ class Ciudad(models.Model):
 
     def __str__(self):
         return self.nombre
+
+    def save(self, *args, **kwargs):
+        from .translation_service import auto_completar_traducciones
+        auto_completar_traducciones(self, ['nombre', 'descripcion'])
+        super().save(*args, **kwargs)
 
 
 class CircuitoCreativo(models.Model):
@@ -35,7 +44,11 @@ class CircuitoCreativo(models.Model):
 
     ciudad = models.ForeignKey(Ciudad, related_name='circuitos', on_delete=models.CASCADE)
     nombre = models.CharField(max_length=150)
+    nombre_en = models.CharField(max_length=150, blank=True, null=True, help_text="Traducción al inglés")
+    nombre_zh = models.CharField(max_length=150, blank=True, null=True, help_text="Traducción al mandarín")
     descripcion = models.TextField()
+    descripcion_en = models.TextField(blank=True, null=True, help_text="Traducción al inglés")
+    descripcion_zh = models.TextField(blank=True, null=True, help_text="Traducción al mandarín")
     distancia_km = models.DecimalField(max_digits=5, decimal_places=2)
     duracion_estimada = models.CharField(max_length=50)
     dificultad = models.CharField(max_length=10, choices=DIFICULTAD_CHOICES, default='Baja')
@@ -43,6 +56,11 @@ class CircuitoCreativo(models.Model):
 
     def __str__(self):
         return f"{self.nombre} ({self.ciudad.nombre})"
+
+    def save(self, *args, **kwargs):
+        from .translation_service import auto_completar_traducciones
+        auto_completar_traducciones(self, ['nombre', 'descripcion'])
+        super().save(*args, **kwargs)
 
 
 class PuntoInteres(models.Model):
@@ -56,7 +74,11 @@ class PuntoInteres(models.Model):
 
     circuito = models.ForeignKey(CircuitoCreativo, related_name='puntos_interes', on_delete=models.CASCADE)
     nombre = models.CharField(max_length=150)
+    nombre_en = models.CharField(max_length=150, blank=True, null=True, help_text="Traducción al inglés")
+    nombre_zh = models.CharField(max_length=150, blank=True, null=True, help_text="Traducción al mandarín")
     descripcion = models.TextField()
+    descripcion_en = models.TextField(blank=True, null=True, help_text="Traducción al inglés")
+    descripcion_zh = models.TextField(blank=True, null=True, help_text="Traducción al mandarín")
     tipo = models.CharField(max_length=20, choices=TIPO_PUNTO_CHOICES, default='Cultural')
     orden = models.PositiveIntegerField(default=1, help_text="Orden dentro del circuito")
     latitud = models.FloatField()
@@ -70,6 +92,11 @@ class PuntoInteres(models.Model):
     def __str__(self):
         return f"{self.orden}. {self.nombre} ({self.circuito.nombre})"
 
+    def save(self, *args, **kwargs):
+        from .translation_service import auto_completar_traducciones
+        auto_completar_traducciones(self, ['nombre', 'descripcion'])
+        super().save(*args, **kwargs)
+
 
 class DatoHistorico(models.Model):
     TIPO_DATOS_CHOICES = [
@@ -82,8 +109,12 @@ class DatoHistorico(models.Model):
     ciudad = models.ForeignKey(Ciudad, related_name='datos_historicos', on_delete=models.CASCADE, null=True, blank=True)
     punto_interes = models.ForeignKey(PuntoInteres, related_name='datos_historicos', on_delete=models.CASCADE, null=True, blank=True)
     titulo = models.CharField(max_length=200)
+    titulo_en = models.CharField(max_length=200, blank=True, null=True, help_text="Traducción al inglés")
+    titulo_zh = models.CharField(max_length=200, blank=True, null=True, help_text="Traducción al mandarín")
     tipo = models.CharField(max_length=20, choices=TIPO_DATOS_CHOICES, default='Hito')
     contenido = models.TextField()
+    contenido_en = models.TextField(blank=True, null=True, help_text="Traducción al inglés")
+    contenido_zh = models.TextField(blank=True, null=True, help_text="Traducción al mandarín")
     epoca_o_ano = models.CharField(max_length=50, blank=True, null=True, help_text="Ej: Siglo XVI, 1912, Época Colonial")
 
     class Meta:
@@ -93,6 +124,11 @@ class DatoHistorico(models.Model):
     def __str__(self):
         origen = self.ciudad.nombre if self.ciudad else (self.punto_interes.nombre if self.punto_interes else "General")
         return f"{self.titulo} - [{origen}] ({self.tipo})"
+
+    def save(self, *args, **kwargs):
+        from .translation_service import auto_completar_traducciones
+        auto_completar_traducciones(self, ['titulo', 'contenido'])
+        super().save(*args, **kwargs)
 
 
 from django.utils import timezone
@@ -155,7 +191,11 @@ class Empresa(models.Model):
     ciudad = models.ForeignKey(Ciudad, on_delete=models.SET_NULL, null=True, blank=True, related_name='empresas')
     punto_interes = models.ForeignKey(PuntoInteres, on_delete=models.SET_NULL, null=True, blank=True, related_name='empresas')
     nombre = models.CharField(max_length=200)
+    nombre_en = models.CharField(max_length=200, blank=True, null=True, help_text="Traducción al inglés")
+    nombre_zh = models.CharField(max_length=200, blank=True, null=True, help_text="Traducción al mandarín")
     descripcion = models.TextField()
+    descripcion_en = models.TextField(blank=True, null=True, help_text="Traducción al inglés")
+    descripcion_zh = models.TextField(blank=True, null=True, help_text="Traducción al mandarín")
     categoria = models.CharField(max_length=50, choices=TIPO_EMPRESA_CHOICES, default='Destino')
     direccion = models.CharField(max_length=255, blank=True, null=True)
     telefono_contacto = models.CharField(max_length=20, blank=True, null=True)
@@ -174,6 +214,11 @@ class Empresa(models.Model):
     def __str__(self):
         return f"{self.nombre} ({self.usuario.username})"
 
+    def save(self, *args, **kwargs):
+        from .translation_service import auto_completar_traducciones
+        auto_completar_traducciones(self, ['nombre', 'descripcion'])
+        super().save(*args, **kwargs)
+
 
 class OportunidadInversion(models.Model):
     TIPO_INVERSOR_CHOICES = [
@@ -184,7 +229,11 @@ class OportunidadInversion(models.Model):
 
     empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name='oportunidades_inversion')
     titulo = models.CharField(max_length=200)
+    titulo_en = models.CharField(max_length=200, blank=True, null=True, help_text="Traducción al inglés")
+    titulo_zh = models.CharField(max_length=200, blank=True, null=True, help_text="Traducción al mandarín")
     descripcion = models.TextField()
+    descripcion_en = models.TextField(blank=True, null=True, help_text="Traducción al inglés")
+    descripcion_zh = models.TextField(blank=True, null=True, help_text="Traducción al mandarín")
     monto_requerido = models.DecimalField(max_digits=12, decimal_places=2, help_text="Monto objetivo de inversión en USD o C$")
     monto_minimo_inversion = models.DecimalField(max_digits=12, decimal_places=2, default=100.00, help_text="Monto mínimo para invertir")
     monto_recaudado = models.DecimalField(max_digits=12, decimal_places=2, default=0.00)
@@ -199,6 +248,11 @@ class OportunidadInversion(models.Model):
 
     def __str__(self):
         return f"Oportunidad: {self.titulo} - {self.empresa.nombre}"
+
+    def save(self, *args, **kwargs):
+        from .translation_service import auto_completar_traducciones
+        auto_completar_traducciones(self, ['titulo', 'descripcion'])
+        super().save(*args, **kwargs)
 
 
 class InversionTurista(models.Model):
@@ -235,7 +289,11 @@ class Evento(models.Model):
     empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name='eventos', null=True, blank=True)
     ciudad = models.ForeignKey(Ciudad, on_delete=models.SET_NULL, null=True, blank=True, related_name='eventos')
     titulo = models.CharField(max_length=200)
+    titulo_en = models.CharField(max_length=200, blank=True, null=True, help_text="Traducción al inglés")
+    titulo_zh = models.CharField(max_length=200, blank=True, null=True, help_text="Traducción al mandarín")
     descripcion = models.TextField()
+    descripcion_en = models.TextField(blank=True, null=True, help_text="Traducción al inglés")
+    descripcion_zh = models.TextField(blank=True, null=True, help_text="Traducción al mandarín")
     fecha_inicio = models.DateTimeField()
     fecha_fin = models.DateTimeField(null=True, blank=True)
     ubicacion = models.CharField(max_length=255, help_text="Dirección o punto del evento")
@@ -255,6 +313,11 @@ class Evento(models.Model):
         ordering = ['-fecha_inicio']
         verbose_name = "Evento"
         verbose_name_plural = "Eventos"
+
+    def save(self, *args, **kwargs):
+        from .translation_service import auto_completar_traducciones
+        auto_completar_traducciones(self, ['titulo', 'descripcion'])
+        super().save(*args, **kwargs)
 
     @property
     def en_mural(self):
