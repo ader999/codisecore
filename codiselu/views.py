@@ -2,6 +2,7 @@ import urllib.parse
 from django.db import models
 from django.shortcuts import redirect
 from django.conf import settings
+from django.views.generic import TemplateView
 from rest_framework import viewsets, permissions, status, generics
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -592,4 +593,23 @@ class ComentarioPublicacionViewSet(viewsets.ModelViewSet):
         return queryset
 
 
+class LandingPageView(TemplateView):
+    """
+    Vista pública principal que sirve la Landing Page y plantilla informativa
+    de la aplicación móvil Codice路, con enlaces de descarga, términos y condiciones.
+    """
+    template_name = 'landing.html'
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        try:
+            context['ciudades_count'] = Ciudad.objects.count()
+            context['circuitos_count'] = CircuitoCreativo.objects.count()
+            context['puntos_count'] = PuntoInteres.objects.count()
+            context['eventos_count'] = Evento.objects.count()
+        except Exception:
+            context['ciudades_count'] = 10
+            context['circuitos_count'] = 50
+            context['puntos_count'] = 120
+            context['eventos_count'] = 25
+        return context
