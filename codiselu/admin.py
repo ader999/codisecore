@@ -31,9 +31,22 @@ class GaleriaMultimediaInline(admin.TabularInline):
 
 @admin.register(Ciudad)
 class CiudadAdmin(admin.ModelAdmin):
-    list_display = ('nombre', 'latitud_centro', 'longitud_centro', 'ver_circuitos')
-    search_fields = ('nombre',)
+    list_display = ('nombre', 'nombre_en', 'nombre_zh', 'latitud_centro', 'longitud_centro', 'ver_circuitos')
+    search_fields = ('nombre', 'nombre_en', 'nombre_zh')
     inlines = [DatoHistoricoInline, GaleriaMultimediaInline]
+    fieldsets = (
+        ('Información General (Español)', {
+            'fields': ('nombre', 'descripcion', 'imagen_portada', 'latitud_centro', 'longitud_centro')
+        }),
+        ('Traducción al Inglés (Auto / Editable)', {
+            'fields': ('nombre_en', 'descripcion_en'),
+            'classes': ('collapse',)
+        }),
+        ('Traducción al Mandarín (Auto / Editable)', {
+            'fields': ('nombre_zh', 'descripcion_zh'),
+            'classes': ('collapse',)
+        }),
+    )
 
     def ver_circuitos(self, obj):
         count = obj.circuitos.count()
@@ -45,19 +58,61 @@ class CiudadAdmin(admin.ModelAdmin):
 class CircuitoCreativoAdmin(admin.ModelAdmin):
     list_display = ('nombre', 'ciudad', 'distancia_km', 'duracion_estimada', 'dificultad')
     list_filter = ('ciudad', 'dificultad')
+    search_fields = ('nombre', 'nombre_en', 'nombre_zh', 'descripcion')
+    fieldsets = (
+        ('Información General (Español)', {
+            'fields': ('ciudad', 'nombre', 'descripcion', 'distancia_km', 'duracion_estimada', 'dificultad', 'imagen_mapa')
+        }),
+        ('Traducción al Inglés (Auto / Editable)', {
+            'fields': ('nombre_en', 'descripcion_en'),
+            'classes': ('collapse',)
+        }),
+        ('Traducción al Mandarín (Auto / Editable)', {
+            'fields': ('nombre_zh', 'descripcion_zh'),
+            'classes': ('collapse',)
+        }),
+    )
 
 
 @admin.register(PuntoInteres)
 class PuntoInteresAdmin(admin.ModelAdmin):
     list_display = ('orden', 'nombre', 'circuito', 'tipo')
     list_filter = ('tipo', 'circuito__ciudad')
+    search_fields = ('nombre', 'nombre_en', 'nombre_zh', 'descripcion')
     inlines = [DatoHistoricoInline, GaleriaMultimediaInline]
+    fieldsets = (
+        ('Información General (Español)', {
+            'fields': ('circuito', 'nombre', 'descripcion', 'tipo', 'orden', 'latitud', 'longitud')
+        }),
+        ('Traducción al Inglés (Auto / Editable)', {
+            'fields': ('nombre_en', 'descripcion_en'),
+            'classes': ('collapse',)
+        }),
+        ('Traducción al Mandarín (Auto / Editable)', {
+            'fields': ('nombre_zh', 'descripcion_zh'),
+            'classes': ('collapse',)
+        }),
+    )
 
 
 @admin.register(DatoHistorico)
 class DatoHistoricoAdmin(admin.ModelAdmin):
     list_display = ('titulo', 'tipo', 'epoca_o_ano', 'ciudad', 'punto_interes')
     list_filter = ('tipo', 'ciudad')
+    search_fields = ('titulo', 'titulo_en', 'titulo_zh', 'contenido')
+    fieldsets = (
+        ('Información General (Español)', {
+            'fields': ('ciudad', 'punto_interes', 'titulo', 'tipo', 'contenido', 'epoca_o_ano')
+        }),
+        ('Traducción al Inglés (Auto / Editable)', {
+            'fields': ('titulo_en', 'contenido_en'),
+            'classes': ('collapse',)
+        }),
+        ('Traducción al Mandarín (Auto / Editable)', {
+            'fields': ('titulo_zh', 'contenido_zh'),
+            'classes': ('collapse',)
+        }),
+    )
 
 
 @admin.register(GaleriaMultimedia)
@@ -83,15 +138,49 @@ class OportunidadInversionInline(admin.TabularInline):
 class EmpresaAdmin(admin.ModelAdmin):
     list_display = ('id', 'nombre', 'usuario', 'categoria', 'ciudad', 'acepta_inversiones', 'fecha_creacion')
     list_filter = ('acepta_inversiones', 'categoria', 'ciudad')
-    search_fields = ('nombre', 'descripcion', 'usuario__username')
+    search_fields = ('nombre', 'nombre_en', 'nombre_zh', 'descripcion', 'usuario__username')
     inlines = [OportunidadInversionInline]
+    fieldsets = (
+        ('Información General (Español)', {
+            'fields': (
+                'usuario', 'ciudad', 'punto_interes', 'nombre', 'descripcion',
+                'categoria', 'direccion', 'telefono_contacto', 'email_contacto',
+                'sitio_web', 'imagen_portada', 'latitud', 'longitud', 'acepta_inversiones'
+            )
+        }),
+        ('Traducción al Inglés (Auto / Editable)', {
+            'fields': ('nombre_en', 'descripcion_en'),
+            'classes': ('collapse',)
+        }),
+        ('Traducción al Mandarín (Auto / Editable)', {
+            'fields': ('nombre_zh', 'descripcion_zh'),
+            'classes': ('collapse',)
+        }),
+    )
 
 
 @admin.register(OportunidadInversion)
 class OportunidadInversionAdmin(admin.ModelAdmin):
     list_display = ('id', 'titulo', 'empresa', 'monto_requerido', 'monto_recaudado', 'tipo_inversor_permitido', 'esta_activa')
     list_filter = ('esta_activa', 'tipo_inversor_permitido', 'empresa__ciudad')
-    search_fields = ('titulo', 'descripcion', 'empresa__nombre')
+    search_fields = ('titulo', 'titulo_en', 'titulo_zh', 'descripcion', 'empresa__nombre')
+    fieldsets = (
+        ('Información General (Español)', {
+            'fields': (
+                'empresa', 'titulo', 'descripcion', 'monto_requerido',
+                'monto_minimo_inversion', 'monto_recaudado', 'retorno_estimado',
+                'tipo_inversor_permitido', 'esta_activa'
+            )
+        }),
+        ('Traducción al Inglés (Auto / Editable)', {
+            'fields': ('titulo_en', 'descripcion_en'),
+            'classes': ('collapse',)
+        }),
+        ('Traducción al Mandarín (Auto / Editable)', {
+            'fields': ('titulo_zh', 'descripcion_zh'),
+            'classes': ('collapse',)
+        }),
+    )
 
 
 @admin.register(InversionTurista)
@@ -110,8 +199,26 @@ class EventoAsistenciaInline(admin.TabularInline):
 class EventoAdmin(admin.ModelAdmin):
     list_display = ('id', 'titulo', 'creador', 'empresa', 'ciudad', 'fecha_inicio', 'total_granos_cafe', 'total_asistentes', 'es_oficial', 'esta_activo')
     list_filter = ('es_oficial', 'esta_activo', 'es_gratuito', 'ciudad', 'fecha_inicio')
-    search_fields = ('titulo', 'descripcion', 'ubicacion', 'creador__username', 'empresa__nombre')
+    search_fields = ('titulo', 'titulo_en', 'titulo_zh', 'descripcion', 'ubicacion', 'creador__username', 'empresa__nombre')
     inlines = [GaleriaMultimediaInline, EventoAsistenciaInline]
+    fieldsets = (
+        ('Información General (Español)', {
+            'fields': (
+                'creador', 'empresa', 'ciudad', 'titulo', 'descripcion',
+                'fecha_inicio', 'fecha_fin', 'ubicacion', 'latitud', 'longitud',
+                'imagen', 'precio_entrada', 'es_gratuito', 'cupo_maximo',
+                'es_oficial', 'dias_previos_mural', 'esta_activo'
+            )
+        }),
+        ('Traducción al Inglés (Auto / Editable)', {
+            'fields': ('titulo_en', 'descripcion_en'),
+            'classes': ('collapse',)
+        }),
+        ('Traducción al Mandarín (Auto / Editable)', {
+            'fields': ('titulo_zh', 'descripcion_zh'),
+            'classes': ('collapse',)
+        }),
+    )
 
 
 @admin.register(EventoAsistencia)
