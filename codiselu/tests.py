@@ -986,7 +986,8 @@ class AsistenteVirtualApiTests(APITestCase):
     @patch('codiselu.asistente_service.AsistenteVirtualService.procesar_mensaje')
     def test_asistente_chat_endpoint_mock_exitoso(self, mock_procesar):
         mock_procesar.return_value = {
-            "respuesta": "En Granada te sugiero recorrer la Ruta Colonial.",
+            "nombre_asistente": "Eduardo",
+            "respuesta": "¡Hola! Soy Eduardo. En Granada te sugiero recorrer la Ruta Colonial.",
             "herramientas_utilizadas": [
                 {"nombre": "buscar_circuitos", "argumentos": {"ciudad": "Granada"}}
             ],
@@ -1001,6 +1002,7 @@ class AsistenteVirtualApiTests(APITestCase):
         }
         res = self.client.post(self.chat_url, payload, format='json')
         self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertEqual(res.data.get("nombre_asistente"), "Eduardo")
         self.assertIn("respuesta", res.data)
         self.assertEqual(res.data["modelo_utilizado"], "gemini-3.1-flash-lite")
         self.assertEqual(len(res.data["herramientas_utilizadas"]), 1)

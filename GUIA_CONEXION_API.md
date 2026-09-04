@@ -885,11 +885,11 @@ curl -X POST http://localhost:8000/api/publicaciones/ \
 
 ---
 
-## 12. Asistente Virtual Turístico Inteligente (IA - Gemini con Function Calling)
+## 12. Asistente Virtual Turístico Inteligente "Eduardo" (IA - Gemini con Function Calling)
 
-La plataforma cuenta con un asistente virtual inteligente impulsado por los modelos **Google Gemini** con tecnología de **Function Calling (Tool Calling)**. 
+La plataforma cuenta con **Eduardo**, un asistente virtual turístico inteligente impulsado por los modelos **Google Gemini** con tecnología de **Function Calling (Tool Calling)**. 
 
-A diferencia de un bot genérico, este asistente tiene acceso directo a la base de datos oficial de Nicaragua en tiempo real: consulta ciudades creativas, circuitos, puntos de interés, eventos, talleres, datos históricos y empresas locales.
+A diferencia de un bot genérico, **Eduardo** tiene acceso directo a la base de datos oficial de Nicaragua en tiempo real: consulta ciudades creativas, circuitos, puntos de interés, eventos, talleres, datos históricos y empresas locales.
 
 ### 12.1 Configuración de Modelos y Fallback
 * **Modelo principal:** `gemini-3.1-flash-lite` (Ultra-rápido y optimizado para respuestas conversacionales en apps móviles).
@@ -903,7 +903,7 @@ A diferencia de un bot genérico, este asistente tiene acceso directo a la base 
 * **Endpoint Principal:** `POST /api/asistente/chat/`
 * **Endpoint Alias:** `POST /api/asistente/`
 * **Autenticación:** Opcional. 
-  * Si el turista está autenticado, envía la cabecera `Authorization: Bearer <access_token>` para que el asistente conozca su nombre y rol (Turista o Protagonista).
+  * Si el turista está autenticado, envía la cabecera `Authorization: Bearer <access_token>` para que Eduardo conozca su nombre y rol (Turista o Protagonista).
   * Si no está autenticado, funciona de forma libre y pública para cualquier visitante.
 * **Headers:**
   * `Content-Type: application/json`
@@ -918,7 +918,7 @@ A diferencia de un bot genérico, este asistente tiene acceso directo a la base 
 | :--- | :--- | :--- | :--- |
 | `mensaje` | `String` | **Sí** | La pregunta o mensaje del usuario (ej: "¿Qué puedo hacer en Masaya en 2 horas?"). |
 | `idioma` | `String` | No | Código de idioma deseado: `"es"` (español), `"en"` (inglés), `"zh"` (mandarín). Por defecto `"es"`. |
-| `ubicacion` | `Object` | No | Coordenadas GPS actuales del dispositivo: `{"latitud": 11.9344, "longitud": -85.9560}`. Permite recomendar sitios cercanos automáticamente. |
+| `ubicacion` | `Object` | No | Coordenadas GPS actuales del dispositivo: `{"latitud": 11.9344, "longitud": -85.9560}`. Permite a Eduardo recomendar sitios cercanos automáticamente. |
 | `historial` | `Array` | No | Lista de mensajes previos para mantener el contexto del hilo conversacional. Formato `[{"role": "user", "parts": ["..."]}, {"role": "model", "parts": ["..."]}]`. |
 
 ---
@@ -937,7 +937,8 @@ A diferencia de un bot genérico, este asistente tiene acceso directo a la base 
 **Respuesta Exitosa (`200 OK`):**
 ```json
 {
-  "respuesta": "¡Hola! En la hermosa ciudad colonial de **Granada** te recomiendo los siguientes circuitos creativos:\n\n1. **Ruta Colonial y Casonas Históricas**:\n   - **Dificultad:** Baja (ideal para caminatas familiares).\n   - **Distancia:** 2.5 km (aproximadamente 1.5 horas).\n   - **Puntos clave:** Parque Central de Granada, Catedral de Granada y Convento San Francisco.\n\n2. **Circuito Artesanal y Tradiciones**:\n   - **Dificultad:** Media.\n   - **Distancia:** 4.2 km.\n   - **Puntos clave:** Talleres locales y malecón del Gran Lago.\n\n¿Te gustaría conocer los horarios de algún punto de interés específico o buscar restaurantes cercanos?",
+  "nombre_asistente": "Eduardo",
+  "respuesta": "¡Hola! Soy Eduardo, tu guía virtual en las Ciudades Creativas de Nicaragua. En la hermosa ciudad colonial de **Granada** te recomiendo los siguientes circuitos creativos:\n\n1. **Ruta Colonial y Casonas Históricas**:\n   - **Dificultad:** Baja (ideal para caminatas familiares).\n   - **Distancia:** 2.5 km (aproximadamente 1.5 horas).\n   - **Puntos clave:** Parque Central de Granada, Catedral de Granada y Convento San Francisco.\n\n2. **Circuito Artesanal y Tradiciones**:\n   - **Dificultad:** Media.\n   - **Distancia:** 4.2 km.\n   - **Puntos clave:** Talleres locales y malecón del Gran Lago.\n\n¿Te gustaría conocer los horarios de algún punto de interés específico o buscar restaurantes cercanos?",
   "herramientas_utilizadas": [
     {
       "nombre": "buscar_circuitos",
@@ -1065,6 +1066,7 @@ data class ChatHistoryItem(
 )
 
 data class ChatResponse(
+    val nombre_asistente: String,
     val respuesta: String,
     val herramientas_utilizadas: List<Map<String, Any>>,
     val modelo_utilizado: String,
