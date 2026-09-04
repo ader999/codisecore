@@ -840,6 +840,200 @@ class TraduccionEndpointsTests(APITestCase):
         self.assertEqual(circuito['ciudad_nombre'], "殖民地格拉纳达")
 
 
+class AsistenteVirtualApiTests(APITestCase):
+
+    def setUp(self):
+        from codiselu.models import (
+            Ciudad, CircuitoCreativo, PuntoInteres, DatoHistorico,
+            Empresa, Evento, OportunidadInversion
+        )
+        self.chat_url = reverse('asistente_chat')
+        self.chat_alias_url = reverse('asistente_chat_alias')
+
+        self.ciudad = Ciudad.objects.create(
+            nombre="Granada",
+            descripcion="Granada la Sultana",
+            latitud_centro=11.9344,
+            longitud_centro=-85.9560
+        )
+        self.circuito = CircuitoCreativo.objects.create(
+            ciudad=self.ciudad,
+            nombre="Ruta Colonial",
+            descripcion="Recorrido histórico por casonas coloniales",
+            distancia_km=3.5,
+            duracion_estimada="2 horas",
+            dificultad="Baja"
+        )
+        self.punto = PuntoInteres.objects.create(
+            circuito=self.circuito,
+            nombre="Parque Central",
+            descripcion="Plaza principal de Granada",
+            tipo="Historico",
+            orden=1,
+            latitud=11.9345,
+            longitud=-85.9561
+        )
+        self.dato = DatoHistorico.objects.create(
+            ciudad=self.ciudad,
+            titulo="Fundación de Granada",
+            tipo="Hito",
+            contenido="Fundada en 1524 por Francisco Hernández de Córdoba.",
+            epoca_o_ano="1524"
+        )
+        self.user = User.objects.create_user(
+            username='artesano_prota',
+            email='artesano@example.com',
+            password='Password123!',
+            es_protagonista=True
+        )
+        self.empresa = Empresa.objects.create(
+            usuario=self.user,
+            ciudad=self.ciudad,
+            nombre="Café de las Flores",
+            descripcion="Cafetería y galería colonial",
+            categoria="Gastronomia",
+            acepta_inversiones=True
+        )
+        self.oportunidad = OportunidadInversion.objects.create(
+            empresa=self.empresa,
+            titulo="Nueva tostadora de café",
+            descripcion="Proyecto para procesar café local",
+            monto_requerido=2000.0,
+            monto_minimo_inversion=50.0
+        )
+        from django.utils import timezone
+        self.evento = Evento.objects.create(
+            creador=self.user,
+            ciudad=self.ciudad,
+            titulo="Festival Internacional de Poesía",
+            descripcion="Lecturas y recitales",
+            fecha_inicio=timezone.now() + timezone.timedelta(days=5),
+            ubicacion="Plaza Central",
+            es_gratuito=True
+        )
+
+    def test_asistente_sin_mensaje_retorna_400(self):
+        res = self.client.post(self.chat_url, {}, format='json')
+        self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(res.data['error'], 'MENSAJE_REQUERIDO')
+
+        # Probar con mensaje vacío o solo espacios
+        res_vacio = self.client.post(self.chat_url, {'mensaje': '   '}, format='json')
+        self.assertEqual(res_vacio.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_asistente_sin_api_key_retorna_503(self):
+        with self.settings(GEMINI_API_KEY=''):
+            res = self.client.post(self.chat_url, {'mensaje': '¿Qué puedo visitar en Granada?'}, format='json')
+            self.assertEqual(res.status_code, status.HTTP_503_SERVICE_UNAVAILABLE)
+            self.assertEqual(res.data['error'], 'GEMINI_NO_CONFIGURADO')
+            self.assertIn('instrucciones', res.data)
+
+    def test_herramientas_orm_directas(self):
+        from codiselu.asistente_tools import (
+            buscar_ciudades,
+            buscar_circuitos,
+            buscar_puntos_interes,
+            buscar_puntos_cercanos,
+            buscar_eventos,
+            buscar_empresas,
+            buscar_datos_historicos,
+            buscar_oportunidades_inversion
+        )
+
+        # 1. buscar_ciudades
+        ciudades = buscar_ciudades(nombre="Granada")
+        self.assertEqual(len(ciudades), 1)
+        self.assertEqual(ciudades[0]['nombre'], "Granada")
+        self.assertIn('coordenadas', ciudades[0])
+
+        # 2. buscar_circuitos
+        circuitos = buscar_circuitos(ciudad="Granada", dificultad="Baja")
+        self.assertEqual(len(circuitos), 1)
+        self.assertEqual(circuitos[0]['nombre'], "Ruta Colonial")
+        self.assertEqual(circuitos[0]['distancia_km'], 3.5)
+
+        # 3. buscar_puntos_interes
+        puntos = buscar_puntos_interes(ciudad="Granada", tipo="Historico")
+        self.assertEqual(len(puntos), 1)
+        self.assertEqual(puntos[0]['nombre'], "Parque Central")
+
+        # 4. buscar_puntos_cercanos (coordenadas a pocos metros de Parque Central)
+        cercanos = buscar_puntos_cercanos(latitud=11.9344, longitud=-85.9560, radio_km=1.0)
+        self.assertEqual(len(cercanos), 1)
+        self.assertEqual(cercanos[0]['nombre'], "Parque Central")
+        self.assertLess(cercanos[0]['distancia_km'], 0.5)
+
+        # 5. buscar_eventos
+        eventos = buscar_eventos(ciudad="Granada")
+        self.assertEqual(len(eventos), 1)
+        self.assertEqual(eventos[0]['titulo'], "Festival Internacional de Poesía")
+
+        # 6. buscar_empresas
+        empresas = buscar_empresas(ciudad="Granada", categoria="Gastronomia")
+        self.assertEqual(len(empresas), 1)
+        self.assertEqual(empresas[0]['nombre'], "Café de las Flores")
+
+        # 7. buscar_datos_historicos
+        datos = buscar_datos_historicos(ciudad="Granada")
+        self.assertEqual(len(datos), 1)
+        self.assertEqual(datos[0]['titulo'], "Fundación de Granada")
+
+        # 8. buscar_oportunidades_inversion
+        ops = buscar_oportunidades_inversion(ciudad="Granada")
+        self.assertEqual(len(ops), 1)
+        self.assertEqual(ops[0]['titulo'], "Nueva tostadora de café")
+
+    @patch('codiselu.asistente_service.AsistenteVirtualService.procesar_mensaje')
+    def test_asistente_chat_endpoint_mock_exitoso(self, mock_procesar):
+        mock_procesar.return_value = {
+            "respuesta": "En Granada te sugiero recorrer la Ruta Colonial.",
+            "herramientas_utilizadas": [
+                {"nombre": "buscar_circuitos", "argumentos": {"ciudad": "Granada"}}
+            ],
+            "modelo_utilizado": "gemini-3.1-flash-lite",
+            "idioma": "es"
+        }
+
+        payload = {
+            "mensaje": "¿Qué ruta me recomiendas en Granada?",
+            "idioma": "es",
+            "ubicacion": {"latitud": 11.9344, "longitud": -85.9560}
+        }
+        res = self.client.post(self.chat_url, payload, format='json')
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertIn("respuesta", res.data)
+        self.assertEqual(res.data["modelo_utilizado"], "gemini-3.1-flash-lite")
+        self.assertEqual(len(res.data["herramientas_utilizadas"]), 1)
+
+        # Probar también el endpoint alias /api/asistente/
+        res_alias = self.client.post(self.chat_alias_url, payload, format='json')
+        self.assertEqual(res_alias.status_code, status.HTTP_200_OK)
+        self.assertEqual(res_alias.data["respuesta"], res.data["respuesta"])
+
+    def test_asistente_fallback_logica(self):
+        from codiselu.asistente_service import AsistenteVirtualService
+
+        with self.settings(
+            GEMINI_API_KEY='test-key',
+            GEMINI_MODEL='gemini-3.1-flash-lite',
+            GEMINI_FALLBACK_MODEL='gemini-3.8-flash'
+        ):
+            servicio = AsistenteVirtualService()
+
+            # Simular que el modelo principal falla y el fallback tiene éxito
+            def mock_ejecutar(modelo, *args, **kwargs):
+                if modelo == 'gemini-3.1-flash-lite':
+                    raise RuntimeError("Modelo primario no disponible en esta región")
+                elif modelo == 'gemini-3.8-flash':
+                    return "Respuesta generada por modelo de respaldo", [{"nombre": "buscar_ciudades", "argumentos": {}}]
+                raise ValueError("Modelo desconocido")
+
+            with patch.object(servicio, '_ejecutar_chat_con_modelo', side_effect=mock_ejecutar):
+                resultado = servicio.procesar_mensaje(mensaje="Hola")
+                self.assertEqual(resultado['modelo_utilizado'], 'gemini-3.8-flash')
+                self.assertEqual(resultado['respuesta'], "Respuesta generada por modelo de respaldo")
+
+
 
 
 

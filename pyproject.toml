@@ -14,5 +14,6 @@ dependencies = [
     "django-storages[boto3]>=1.14",
     "google-auth>=2.27.0",
     "requests>=2.31.0",
-    "deep-translator>=1.11.4"
+    "deep-translator>=1.11.4",
+    "google-genai>=2.0.0"
 ]

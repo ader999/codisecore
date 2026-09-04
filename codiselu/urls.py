@@ -23,7 +23,8 @@ from .views import (
     EventoViewSet,
     PublicacionViewSet,
     ComentarioPublicacionViewSet,
-    LandingPageView
+    LandingPageView,
+    AsistenteChatView
 )
 
 router = DefaultRouter()
@@ -57,6 +58,9 @@ urlpatterns = [
     path('api/auth/google/', GoogleAuthView.as_view(), name='auth_google'),
     path('api/auth/google/url/', GoogleLoginUrlView.as_view(), name='auth_google_url'),
     path('api/auth/google/callback/', GoogleAuthCallbackView.as_view(), name='auth_google_callback'),
+    # Asistente Virtual Inteligente (Gemini Function Calling)
+    path('api/asistente/chat/', AsistenteChatView.as_view(), name='asistente_chat'),
+    path('api/asistente/', AsistenteChatView.as_view(), name='asistente_chat_alias'),
     # Accesos directos alternativos
     path('api/register/', RegisterView.as_view(), name='register'),
     path('api/login/', LoginView.as_view(), name='login'),
