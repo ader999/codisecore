@@ -613,3 +613,87 @@ class LandingPageView(TemplateView):
             context['puntos_count'] = 120
             context['eventos_count'] = 25
         return context
+
+
+import logging
+logger = logging.getLogger(__name__)
+from .asistente_service import AsistenteVirtualService, GeminiNoConfiguradoError
+
+
+class AsistenteChatView(APIView):
+    """
+    Endpoint del Asistente Virtual Turístico con Inteligencia Artificial (Google Gemini Function Calling).
+    
+    Permite a la aplicación móvil interactuar con un asistente que consulta en tiempo real
+    ciudades, circuitos, puntos de interés, historia, eventos y empresas locales.
+    
+    - Soporta español, inglés y mandarín vía body ('idioma'/'lang'), query param o header Accept-Language.
+    - Soporta geolocalización GPS ('ubicacion': {'latitud': ..., 'longitud': ...}) para calcular sitios cercanos.
+    - Soporta historial multi-turno de conversación ('historial').
+    - Maneja fallback automático entre modelos Gemini (ej. gemini-3.1-flash-lite -> gemini-3.8-flash).
+    """
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request, *args, **kwargs):
+        mensaje = request.data.get('mensaje') or request.data.get('message') or request.data.get('prompt')
+        if not mensaje or not str(mensaje).strip():
+            return Response(
+                {
+                    "error": "MENSAJE_REQUERIDO",
+                    "mensaje": "El campo 'mensaje' es obligatorio para interactuar con el asistente virtual."
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Determinar idioma preferido
+        idioma_raw = (
+            request.data.get('idioma') or
+            request.data.get('lang') or
+            request.query_params.get('idioma') or
+            request.query_params.get('lang') or
+            request.META.get('HTTP_ACCEPT_LANGUAGE', 'es')
+        )
+        idioma_norm = str(idioma_raw).lower().split(';')[0].split(',')[0].strip()
+        if 'zh' in idioma_norm:
+            idioma = 'zh'
+        elif 'en' in idioma_norm:
+            idioma = 'en'
+        else:
+            idioma = 'es'
+
+        historial = request.data.get('historial') or request.data.get('history') or []
+        ubicacion = request.data.get('ubicacion') or request.data.get('location')
+
+        servicio = AsistenteVirtualService()
+        try:
+            resultado = servicio.procesar_mensaje(
+                mensaje=str(mensaje).strip(),
+                historial=historial,
+                idioma=idioma,
+                ubicacion=ubicacion,
+                usuario=request.user if (request.user and request.user.is_authenticated) else None
+            )
+            return Response(resultado, status=status.HTTP_200_OK)
+
+        except GeminiNoConfiguradoError as e:
+            return Response(
+                {
+                    "error": "GEMINI_NO_CONFIGURADO",
+                    "mensaje": str(e),
+                    "instrucciones": (
+                        "Para activar el asistente virtual, añade tu GEMINI_API_KEY en el archivo .env "
+                        "o en las variables de entorno de tu servidor. "
+                        "Puedes generar una clave gratuita en Google AI Studio: https://aistudio.google.com/app/apikey"
+                    )
+                },
+                status=status.HTTP_503_SERVICE_UNAVAILABLE
+            )
+        except Exception as e:
+            logger.error(f"Error procesando consulta con el asistente virtual: {e}", exc_info=True)
+            return Response(
+                {
+                    "error": "ERROR_ASISTENTE_IA",
+                    "mensaje": f"Ocurrió un error al procesar tu solicitud con el asistente: {str(e)}"
+                },
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )

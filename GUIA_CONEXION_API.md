@@ -883,6 +883,239 @@ curl -X POST http://localhost:8000/api/publicaciones/ \
 * **Respuesta Exitosa (204 No Content):** El comentario es eliminado y descontado del contador `total_comentarios` de la publicación.
 * **Error de Permiso (403 Forbidden):** Retornado si un usuario intenta eliminar el comentario de otra persona.
 
+---
 
+## 12. Asistente Virtual Turístico Inteligente (IA - Gemini con Function Calling)
 
+La plataforma cuenta con un asistente virtual inteligente impulsado por los modelos **Google Gemini** con tecnología de **Function Calling (Tool Calling)**. 
 
+A diferencia de un bot genérico, este asistente tiene acceso directo a la base de datos oficial de Nicaragua en tiempo real: consulta ciudades creativas, circuitos, puntos de interés, eventos, talleres, datos históricos y empresas locales.
+
+### 12.1 Configuración de Modelos y Fallback
+* **Modelo principal:** `gemini-3.1-flash-lite` (Ultra-rápido y optimizado para respuestas conversacionales en apps móviles).
+* **Modelo de respaldo (Fallback automático):** `gemini-3.8-flash` (Se activa automáticamente si el modelo principal experimenta sobrecarga o no está disponible).
+* **Configuración del servidor:** Se configura mediante la variable `GEMINI_API_KEY` en el archivo `.env`.
+
+---
+
+### 12.2 Endpoint de Conversación
+
+* **Endpoint Principal:** `POST /api/asistente/chat/`
+* **Endpoint Alias:** `POST /api/asistente/`
+* **Autenticación:** Opcional. 
+  * Si el turista está autenticado, envía la cabecera `Authorization: Bearer <access_token>` para que el asistente conozca su nombre y rol (Turista o Protagonista).
+  * Si no está autenticado, funciona de forma libre y pública para cualquier visitante.
+* **Headers:**
+  * `Content-Type: application/json`
+  * `Authorization: Bearer <access_token>` *(Opcional)*
+  * `Accept-Language: es` *(Opcional: `es`, `en`, `zh`)*
+
+---
+
+### 12.3 Parámetros del Body (JSON)
+
+| Campo | Tipo | Requerido | Descripción |
+| :--- | :--- | :--- | :--- |
+| `mensaje` | `String` | **Sí** | La pregunta o mensaje del usuario (ej: "¿Qué puedo hacer en Masaya en 2 horas?"). |
+| `idioma` | `String` | No | Código de idioma deseado: `"es"` (español), `"en"` (inglés), `"zh"` (mandarín). Por defecto `"es"`. |
+| `ubicacion` | `Object` | No | Coordenadas GPS actuales del dispositivo: `{"latitud": 11.9344, "longitud": -85.9560}`. Permite recomendar sitios cercanos automáticamente. |
+| `historial` | `Array` | No | Lista de mensajes previos para mantener el contexto del hilo conversacional. Formato `[{"role": "user", "parts": ["..."]}, {"role": "model", "parts": ["..."]}]`. |
+
+---
+
+### 12.4 Ejemplos de Petición y Respuesta
+
+#### Ejemplo 1: Consulta básica con recomendación de circuitos y eventos
+**Petición (`POST /api/asistente/chat/`):**
+```json
+{
+  "mensaje": "¿Qué circuitos turísticos me recomiendas en Granada y qué dificultad tienen?",
+  "idioma": "es"
+}
+```
+
+**Respuesta Exitosa (`200 OK`):**
+```json
+{
+  "respuesta": "¡Hola! En la hermosa ciudad colonial de **Granada** te recomiendo los siguientes circuitos creativos:\n\n1. **Ruta Colonial y Casonas Históricas**:\n   - **Dificultad:** Baja (ideal para caminatas familiares).\n   - **Distancia:** 2.5 km (aproximadamente 1.5 horas).\n   - **Puntos clave:** Parque Central de Granada, Catedral de Granada y Convento San Francisco.\n\n2. **Circuito Artesanal y Tradiciones**:\n   - **Dificultad:** Media.\n   - **Distancia:** 4.2 km.\n   - **Puntos clave:** Talleres locales y malecón del Gran Lago.\n\n¿Te gustaría conocer los horarios de algún punto de interés específico o buscar restaurantes cercanos?",
+  "herramientas_utilizadas": [
+    {
+      "nombre": "buscar_circuitos",
+      "argumentos": {
+        "ciudad": "Granada"
+      }
+    }
+  ],
+  "modelo_utilizado": "gemini-3.1-flash-lite",
+  "idioma": "es"
+}
+```
+
+---
+
+#### Ejemplo 2: Consulta geolocalizada (Sitios turísticos cercanos vía GPS)
+Cuando el usuario permite permisos de ubicación en Android/iOS, la app puede adjuntar el objeto `ubicacion`. El asistente llamará en tiempo real a la herramienta `buscar_puntos_cercanos`:
+
+**Petición (`POST /api/asistente/chat/`):**
+```json
+{
+  "mensaje": "¿Qué atractivos turísticos o talleres tengo cerca de donde estoy parado?",
+  "idioma": "es",
+  "ubicacion": {
+    "latitud": 11.9744,
+    "longitud": -86.0942
+  }
+}
+```
+
+**Respuesta (`200 OK`):**
+```json
+{
+  "respuesta": "Según tu ubicación actual en Masaya, tienes estos puntos a pocos minutos:\n\n* **Taller Escuela de Hamacas Monimbó** (a 0.4 km): Taller artesanal con demostración de tejido tradicional.\n* **Mercado de Artesanías de Masaya** (a 1.1 km): Gran variedad de artesanías, cuero, madera y dulces típicos.\n* **Mirador de Catarina** (a 4.8 km): Hermosa vista hacia la Laguna de Apoyo.\n\n¿Deseas indicaciones o información de horarios de alguno?",
+  "herramientas_utilizadas": [
+    {
+      "nombre": "buscar_puntos_cercanos",
+      "argumentos": {
+        "latitud": 11.9744,
+        "longitud": -86.0942,
+        "radio_km": 5.0
+      }
+    }
+  ],
+  "modelo_utilizado": "gemini-3.1-flash-lite",
+  "idioma": "es"
+}
+```
+
+---
+
+#### Ejemplo 3: Pregunta en Inglés o Mandarín (Soporte Internacional)
+**Petición en Inglés:**
+```json
+{
+  "mensaje": "What cultural events are happening this month in Leon?",
+  "idioma": "en"
+}
+```
+
+**Petición en Chino Mandarín:**
+```json
+{
+  "mensaje": "莱昂市有什么推荐的旅游路线吗？",
+  "idioma": "zh"
+}
+```
+
+---
+
+#### Ejemplo 4: Conversación con Historial (Mantener el Hilo)
+Para mantener memoria de lo que se habló antes, la app móvil reenvía las respuestas acumuladas:
+
+```json
+{
+  "mensaje": "¿A qué hora abre la catedral?",
+  "historial": [
+    {
+      "role": "user",
+      "parts": ["¿Qué lugares puedo visitar en León?"]
+    },
+    {
+      "role": "model",
+      "parts": ["En León puedes visitar la Insigne y Real Basílica Catedral de la Asunción y el Centro de Arte Fundación Ortiz Gurdián."]
+    }
+  ],
+  "idioma": "es"
+}
+```
+
+---
+
+### 12.5 Códigos de Estado y Errores
+
+| Código HTTP | Error | Causa y Solución |
+| :--- | :--- | :--- |
+| **`200 OK`** | Ninguno | Respuesta generada exitosamente por el asistente. |
+| **`400 Bad Request`** | `MENSAJE_REQUERIDO` | El campo `mensaje` estaba ausente o vacío. |
+| **`503 Service Unavailable`** | `GEMINI_NO_CONFIGURADO` | El servidor aún no tiene la clave `GEMINI_API_KEY` en el archivo `.env`. |
+| **`500 Internal Server Error`** | `ERROR_ASISTENTE_IA` | Ocurrió un error inesperado al conectar con el servicio de IA. |
+
+---
+
+### 12.6 Ejemplo de Implementación en Kotlin (Android Nativo)
+
+A continuación tienes un ejemplo con **Retrofit** y **Coroutines** listo para integrar en la app móvil:
+
+```kotlin
+// 1. Modelos de datos
+data class ChatRequest(
+    val mensaje: String,
+    val idioma: String = "es",
+    val ubicacion: UbicacionGps? = null,
+    val historial: List<ChatHistoryItem>? = null
+)
+
+data class UbicacionGps(
+    val latitud: Double,
+    val longitud: Double
+)
+
+data class ChatHistoryItem(
+    val role: String, // "user" o "model"
+    val parts: List<String>
+)
+
+data class ChatResponse(
+    val respuesta: String,
+    val herramientas_utilizadas: List<Map<String, Any>>,
+    val modelo_utilizado: String,
+    val idioma: String
+)
+
+// 2. Definición del servicio Retrofit
+interface AsistenteApiService {
+    @POST("api/asistente/chat/")
+    suspend fun enviarMensaje(
+        @Header("Authorization") authHeader: String? = null,
+        @Body request: ChatRequest
+    ): retrofit2.Response<ChatResponse>
+}
+
+// 3. Llamada desde ViewModel o Repository
+suspend fun preguntarAlAsistente(
+    pregunta: String,
+    latitud: Double?,
+    longitud: Double?,
+    historialPrevio: List<ChatHistoryItem>
+): String? {
+    val ubicacion = if (latitud != null && longitud != null) {
+        UbicacionGps(latitud, longitud)
+    } else null
+
+    val body = ChatRequest(
+        mensaje = pregunta,
+        idioma = "es",
+        ubicacion = ubicacion,
+        historial = historialPrevio
+    )
+
+    val response = apiService.enviarMensaje(request = body)
+    return if (response.isSuccessful) {
+        response.body()?.respuesta
+    } else {
+        null
+    }
+}
+```
+
+---
+
+### 12.7 Ejemplo con cURL
+
+```bash
+curl -X POST "http://localhost:8000/api/asistente/chat/" \
+     -H "Content-Type: application/json" \
+     -d '{
+       "mensaje": "¿Cuáles son los eventos culturales más importantes de este mes?",
+       "idioma": "es"
+     }'
+```
