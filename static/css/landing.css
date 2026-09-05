@@ -353,6 +353,7 @@ a {
   background: rgba(18, 26, 45, 0.95);
   border: 1px solid rgba(255, 255, 255, 0.12);
   color: #ffffff;
+  text-decoration: none;
   cursor: pointer;
   transition: all var(--transition-smooth);
   position: relative;
@@ -375,6 +376,8 @@ a {
 .store-btn:hover {
   transform: translateY(-3px);
   border-color: var(--accent-gold);
+  color: #ffffff;
+  text-decoration: none;
   box-shadow: 0 12px 28px -5px rgba(245, 158, 11, 0.25);
 }
 
@@ -471,205 +474,305 @@ a {
 .phone-mockup-wrapper {
   position: relative;
   width: 100%;
-  max-width: 330px;
+  max-width: 320px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
 }
 
+/* Selector Interactivo de Pantallas */
+.phone-view-switcher {
+  display: inline-flex;
+  background: rgba(14, 20, 36, 0.85);
+  border: 1px solid var(--glass-border);
+  border-radius: 999px;
+  padding: 4px;
+  gap: 4px;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
+  z-index: 8;
+}
+
+.switcher-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  font-weight: 600;
+  padding: 6px 14px;
+  border-radius: 999px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  font-family: inherit;
+}
+
+.switcher-btn:hover {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.switcher-btn.active {
+  background: linear-gradient(135deg, var(--primary-terracotta) 0%, var(--accent-gold) 100%);
+  color: #ffffff;
+  box-shadow: 0 4px 14px rgba(217, 83, 30, 0.4);
+}
+
+.switcher-icon {
+  font-size: 0.95rem;
+}
+
+/* Chasis / Cuerpo del Teléfono */
 .phone-mockup {
   position: relative;
   width: 100%;
-  aspect-ratio: 9/19;
-  border-radius: 46px;
-  background: #0b1120;
-  border: 7px solid #222f4b;
+  aspect-ratio: 449 / 980;
+  border-radius: 44px;
+  background: #090d16;
+  border: 8px solid #1a2336;
   box-shadow: 
-    0 25px 60px -15px rgba(0, 0, 0, 0.8),
-    0 0 50px -10px rgba(245, 158, 11, 0.15),
-    inset 0 0 12px rgba(255, 255, 255, 0.05);
+    0 25px 70px -15px rgba(0, 0, 0, 0.85),
+    0 0 50px -10px rgba(245, 158, 11, 0.2),
+    inset 0 0 4px 1px rgba(255, 255, 255, 0.15);
   overflow: hidden;
   display: flex;
   flex-direction: column;
 }
 
-.phone-notch {
-  width: 120px;
-  height: 22px;
-  background: #222f4b;
-  margin: 0 auto;
-  border-radius: 0 0 14px 14px;
+/* Barra superior minimalista */
+.phone-top-bar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 24px;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  z-index: 10;
+  z-index: 20;
+  pointer-events: none;
 }
 
-.phone-speaker {
-  width: 45px;
-  height: 4px;
-  border-radius: 4px;
-  background: #334155;
-}
-
-.phone-camera {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: #0284c7;
-}
-
-.phone-screen {
-  flex: 1;
-  padding: 16px;
-  display: flex;
-  flex-direction: column;
-  background: linear-gradient(180deg, #0f172a 0%, #070a12 100%);
-  gap: 12px;
-  position: relative;
-}
-
-.mockup-app-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.mockup-app-title {
-  font-size: 0.95rem;
-  font-weight: 700;
-  color: #ffffff;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.mockup-coffee-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  background: rgba(245, 158, 11, 0.18);
-  border: 1px solid var(--glass-border-gold);
-  color: var(--accent-gold-light);
-  font-size: 0.72rem;
-  font-weight: 700;
-  padding: 3px 8px;
-  border-radius: 999px;
-}
-
-.mockup-map-card {
-  background: #1e293b;
-  border-radius: 16px;
-  padding: 12px;
-  border: 1px solid var(--glass-border);
-  position: relative;
-  overflow: hidden;
-  height: 155px;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  background-image: 
-    radial-gradient(#334155 1.5px, transparent 1.5px),
-    linear-gradient(135deg, rgba(217, 83, 30, 0.25) 0%, rgba(14, 165, 233, 0.2) 100%);
-  background-size: 14px 14px, 100% 100%;
-}
-
-.mockup-gps-ping {
+.phone-speaker-slit {
   position: absolute;
-  top: 45%;
-  left: 48%;
+  top: 6px;
+  width: 48px;
+  height: 3.5px;
+  background: #222f47;
+  border-radius: 4px;
+}
+
+.phone-punch-camera {
+  position: absolute;
+  top: 8px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #080d1a;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: inset 0 0 2px #0284c7;
+}
+
+/* Pantalla del Teléfono */
+.phone-screen {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  background: #083c52;
+  overflow: hidden;
+  border-radius: 36px;
+}
+
+/* Reflejo de cristal dinámico */
+.phone-glass-glare {
+  position: absolute;
+  top: 0;
+  left: -50%;
+  width: 200%;
+  height: 100%;
+  background: linear-gradient(
+    115deg,
+    transparent 35%,
+    rgba(255, 255, 255, 0.07) 48%,
+    rgba(255, 255, 255, 0.14) 50%,
+    rgba(255, 255, 255, 0.05) 52%,
+    transparent 65%
+  );
+  pointer-events: none;
+  z-index: 15;
+  transition: transform 0.6s ease;
+}
+
+.phone-mockup:hover .phone-glass-glare {
+  transform: translateX(15%);
+}
+
+/* Vistas / Pantallas internas */
+.mockup-view-pane {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  visibility: hidden;
+  transform: scale(0.97);
+  transition: opacity 0.4s ease, transform 0.4s ease, visibility 0.4s ease;
+}
+
+.mockup-view-pane.active {
+  opacity: 1;
+  visibility: visible;
+  transform: scale(1);
+}
+
+.mockup-screen-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: top center;
+  display: block;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+/* Marcadores de Radar GPS sobre el Mapa */
+.map-gps-marker {
+  position: absolute;
   transform: translate(-50%, -50%);
   display: flex;
   align-items: center;
   justify-content: center;
+  pointer-events: none;
+  z-index: 10;
 }
 
-.gps-circle {
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  background: rgba(245, 158, 11, 0.25);
-  animation: ripple 2s infinite;
-  position: absolute;
+.marker-esteli {
+  left: 38.7%;
+  top: 26.8%;
 }
 
-.gps-dot {
+.marker-leon {
+  left: 31.8%;
+  top: 30.3%;
+}
+
+.marker-core {
   width: 10px;
   height: 10px;
   border-radius: 50%;
   background: var(--accent-gold);
-  box-shadow: 0 0 10px var(--accent-gold);
+  border: 2px solid #ffffff;
+  box-shadow: 0 0 12px var(--accent-gold), 0 0 6px rgba(0, 0, 0, 0.5);
+  position: relative;
   z-index: 2;
 }
 
-@keyframes ripple {
-  0% { transform: scale(0.6); opacity: 1; }
-  100% { transform: scale(2.4); opacity: 0; }
+.marker-pulse {
+  position: absolute;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(245, 158, 11, 0.35);
+  animation: gps-radar-pulse 2.2s cubic-bezier(0.2, 0.8, 0.2, 1) infinite;
 }
 
-.mockup-map-info {
-  background: rgba(15, 23, 42, 0.85);
-  backdrop-filter: blur(8px);
-  padding: 6px 10px;
-  border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  font-size: 0.7rem;
-  color: #e2e8f0;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+.marker-pulse.delay-1 {
+  animation-delay: 1.1s;
 }
 
-.mockup-circuit-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.mockup-circuit-item {
-  background: rgba(30, 41, 59, 0.6);
-  border: 1px solid var(--glass-border);
-  border-radius: 10px;
-  padding: 8px 10px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.mockup-item-left {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.mockup-item-icon {
-  width: 26px;
-  height: 26px;
+.marker-label {
+  position: absolute;
+  top: -24px;
+  background: rgba(8, 60, 82, 0.92);
+  color: #fef08a;
+  font-size: 0.62rem;
+  font-weight: 700;
+  padding: 2px 7px;
   border-radius: 6px;
-  background: rgba(217, 83, 30, 0.2);
-  color: var(--primary-terracotta);
+  border: 1px solid rgba(245, 158, 11, 0.4);
+  white-space: nowrap;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+  pointer-events: auto;
+  letter-spacing: 0.3px;
+}
+
+@keyframes gps-radar-pulse {
+  0% {
+    transform: scale(0.3);
+    opacity: 0.9;
+  }
+  100% {
+    transform: scale(2.5);
+    opacity: 0;
+  }
+}
+
+/* Hotspots táctiles interactivos en el teléfono */
+.phone-touch-hotspot {
+  position: absolute;
+  bottom: 0;
+  height: 8%;
+  cursor: pointer;
+  z-index: 12;
+  transition: background 0.2s ease;
+}
+
+.hotspot-to-feed {
+  right: 0;
+  width: 38%;
+}
+
+.hotspot-to-map {
+  left: 0;
+  width: 62%;
+}
+
+.phone-touch-hotspot:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+/* Microinteracción de Café en el Feed */
+.feed-coffee-hotspot {
+  position: absolute;
+  top: 57.5%;
+  left: 9%;
+  width: 18%;
+  height: 4.5%;
+  cursor: pointer;
+  z-index: 12;
+  border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.75rem;
 }
 
-.mockup-item-name {
+.feed-coffee-hotspot:hover {
+  background: rgba(245, 158, 11, 0.15);
+}
+
+.coffee-pop-particle {
+  position: absolute;
+  top: -12px;
+  left: 50%;
+  transform: translateX(-50%) translateY(0) scale(0);
+  background: var(--accent-gold);
+  color: #083c52;
+  font-weight: 800;
   font-size: 0.72rem;
-  font-weight: 600;
-  color: #ffffff;
+  padding: 2px 6px;
+  border-radius: 999px;
+  opacity: 0;
+  pointer-events: none;
+  transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
-.mockup-item-city {
-  font-size: 0.62rem;
-  color: var(--text-dim);
-}
-
-.mockup-item-btn {
-  font-size: 0.62rem;
-  background: var(--accent-emerald);
-  color: #ffffff;
-  padding: 3px 8px;
-  border-radius: 6px;
-  font-weight: 600;
+.coffee-pop-particle.pop {
+  transform: translateX(-50%) translateY(-24px) scale(1.1);
+  opacity: 1;
 }
 
 /* Tarjetas Flotantes Alrededor del Mockup */
