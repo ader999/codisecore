@@ -94,7 +94,7 @@
           </button>
 
           <!-- Botón APK Directo -->
-          <button class="store-btn apk-btn" data-open-modal="apkModal" id="btnHeroApk">
+          <a href="https://github.com/ader999/CodiceLuAppMovil/releases/latest/download/codise.apk" class="store-btn apk-btn" id="btnHeroApk" target="_blank" rel="noopener noreferrer" download="codise.apk">
             <div class="store-btn-icon">
               <!-- SVG Android Robot -->
               <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
@@ -107,8 +107,8 @@
               <span class="store-btn-subtitle">Descarga directa</span>
               <span class="store-btn-title">Paquete APK</span>
             </div>
-            <span class="store-btn-badge">v1.0 RC</span>
-          </button>
+            <span class="store-btn-badge">Disponible</span>
+          </a>
         </div>
 
         <div class="hero-meta">
@@ -134,66 +134,56 @@
         </div>
 
         <div class="phone-mockup-wrapper">
+          <!-- Selector Interactivo de Pantallas -->
+          <div class="phone-view-switcher" id="phoneViewSwitcher" role="tablist" aria-label="Vistas de la aplicación">
+            <button class="switcher-btn active" data-view="map" role="tab" aria-selected="true" title="Ver pantalla de 10 Ciudades y Mapa">
+              <span class="switcher-icon">🗺️</span>
+              <span>10 Ciudades</span>
+            </button>
+            <button class="switcher-btn" data-view="feed" role="tab" aria-selected="false" title="Ver Bitácora de la Comunidad">
+              <span class="switcher-icon">📸</span>
+              <span>Bitácora</span>
+            </button>
+          </div>
+
           <div class="phone-mockup">
-            <div class="phone-notch">
-              <div class="phone-speaker"></div>
-              <div class="phone-camera"></div>
+            <!-- Altavoz y cámara frontal moderna punch-hole -->
+            <div class="phone-top-bar">
+              <div class="phone-speaker-slit"></div>
+              <div class="phone-punch-camera"></div>
             </div>
-            <div class="phone-screen">
-              <div class="mockup-app-header">
-                <div class="mockup-app-title">
-                  <span>Codice<span style="color:var(--accent-gold);">路</span></span>
+
+            <div class="phone-screen" id="phoneScreen">
+              <!-- Brillo/reflejo de cristal dinámico -->
+              <div class="phone-glass-glare"></div>
+
+              <!-- Vista 1: Mapa y 10 Ciudades Creativas -->
+              <div class="mockup-view-pane active" id="paneMap" data-pane="map">
+                <img src="static/img/app_mockup_map.png" alt="App Códice - Mapa de 10 Ciudades Creativas" class="mockup-screen-img" loading="eager">
+                <!-- Ping GPS Interactivo en Estelí -->
+                <div class="map-gps-marker marker-esteli" title="Estelí: Circuito Creativo Activo">
+                  <div class="marker-pulse"></div>
+                  <div class="marker-core"></div>
+                  <div class="marker-label">GPS Activo</div>
                 </div>
-                <div class="mockup-coffee-badge">
-                  <span>☕</span> 185 Granos
+                <!-- Ping GPS en León -->
+                <div class="map-gps-marker marker-leon" title="León: Ciudad Creativa">
+                  <div class="marker-pulse delay-1"></div>
+                  <div class="marker-core"></div>
                 </div>
+                <!-- Hotspot de navegación inferior hacia Feed -->
+                <div class="phone-touch-hotspot hotspot-to-feed" title="Toca para ver Bitácora" data-switch-to="feed"></div>
               </div>
 
-              <div class="mockup-map-card">
-                <div class="mockup-gps-ping">
-                  <div class="gps-circle"></div>
-                  <div class="gps-dot"></div>
+              <!-- Vista 2: Bitácora y Feed de la Comunidad -->
+              <div class="mockup-view-pane" id="paneFeed" data-pane="feed">
+                <img src="static/img/app_mockup_feed.png" alt="App Códice - Bitácora de Viaje y Comunidad" class="mockup-screen-img" loading="lazy">
+                <!-- Hotspot interactivo para los granos de café -->
+                <div class="feed-coffee-hotspot" id="feedCoffeeHotspot" title="Reaccionar con Granos de Café ☕">
+                  <span class="coffee-pop-particle">+1 ☕</span>
                 </div>
-                <div></div>
-                <div class="mockup-map-info">
-                  <span>📍 León · Ruta de Poesía</span>
-                  <span style="color:#10b981;">● En Rango GPS</span>
-                </div>
-              </div>
-
-              <div class="mockup-circuit-list">
-                <div class="mockup-circuit-item">
-                  <div class="mockup-item-left">
-                    <div class="mockup-item-icon">🎨</div>
-                    <div>
-                      <div class="mockup-item-name">Murales de Estelí</div>
-                      <div class="mockup-item-city">Circuito de las Artes</div>
-                    </div>
-                  </div>
-                  <span class="mockup-item-btn">+20 pts</span>
-                </div>
-
-                <div class="mockup-circuit-item">
-                  <div class="mockup-item-left">
-                    <div class="mockup-item-icon">🏺</div>
-                    <div>
-                      <div class="mockup-item-name">Cerámica Precolombina</div>
-                      <div class="mockup-item-city">San Juan de Oriente</div>
-                    </div>
-                  </div>
-                  <span class="mockup-item-btn">+25 pts</span>
-                </div>
-
-                <div class="mockup-circuit-item">
-                  <div class="mockup-item-left">
-                    <div class="mockup-item-icon">🎭</div>
-                    <div>
-                      <div class="mockup-item-name">Fiesta de los Agüizotes</div>
-                      <div class="mockup-item-city">Masaya · Tradición</div>
-                    </div>
-                  </div>
-                  <span class="mockup-item-btn">+30 pts</span>
-                </div>
+                <!-- Hotspot de navegación inferior hacia Mapa -->
+                <div class="phone-touch-hotspot hotspot-to-map" title="Toca para volver al Mapa" data-switch-to="map"></div>
               </div>
             </div>
           </div>
@@ -436,7 +426,7 @@
           </span>
           <h2 class="download-box-title">Lleva a Nicaragua en tu Bolsillo</h2>
           <p class="download-box-text">
-            Codice路 estará disponible en la tienda Google Play y en archivo APK de descarga directa para teléfonos Android. Sé el primero en experimentar las rutas culturales.
+            Codice路 ya está disponible en archivo APK oficial de descarga directa para teléfonos Android y muy pronto en la tienda Google Play. ¡Descárgala y experimenta las rutas culturales!
           </p>
 
           <div class="download-buttons-center">
@@ -458,7 +448,8 @@
             </button>
 
             <!-- Botón APK Directo -->
-            <button class="store-btn apk-btn" data-open-modal="apkModal">
+            <a href="https://github.com/ader999/CodiceLuAppMovil/releases/latest/download/codise.apk"
+               class="store-btn apk-btn" id="btnCtaApk" target="_blank" rel="noopener noreferrer" download="codise.apk">
               <div class="store-btn-icon">
                 <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
                   <path d="M6 18c0 .55.45 1 1 1h1v3.5c0 .83.67 1.5 1.5 1.5s1.5-.67 1.5-1.5V19h2v3.5c0 .83.67 1.5 1.5 1.5s1.5-.67 1.5-1.5V19h1c.55 0 1-.45 1-1V8H6v10z" fill="#10b981"/>
@@ -470,16 +461,16 @@
                 <span class="store-btn-subtitle">Descarga directa</span>
                 <span class="store-btn-title">Archivo APK</span>
               </div>
-              <span class="store-btn-badge">v1.0 RC</span>
-            </button>
+              <span class="store-btn-badge">Disponible</span>
+            </a>
           </div>
 
           <!-- Formulario de Alerta de Lanzamiento -->
           <form class="notify-form">
             <input type="email" class="notify-input" placeholder="Ingresa tu correo electrónico..." required>
-            <button type="submit" class="notify-btn">Notificarme al Lanzar</button>
+            <button type="submit" class="notify-btn">Avisarme en Google Play</button>
           </form>
-          <p class="notify-note">Sin spam. Solo te escribiremos cuando el archivo APK y la ficha de Google Play estén disponibles.</p>
+          <p class="notify-note">Sin spam. La APK ya está disponible para descarga inmediata; te notificaremos cuando la ficha de Google Play esté habilitada.</p>
         </div>
       </div>
     </div>
@@ -514,7 +505,8 @@
           <ul class="footer-links">
             <li><a href="#terminos" data-open-modal="legalModal" data-target-tab="terminosApp">Términos y Condiciones</a></li>
             <li><a href="#privacidad" data-open-modal="legalModal" data-target-tab="privacidadApp">Términos de Uso y Privacidad</a></li>
-            <li><a href="#" data-open-modal="apkModal">Política de Descarga APK</a></li>
+            <li><a href="https://github.com/ader999/CodiceLuAppMovil/releases/latest/download/codise.apk" target="_blank" rel="noopener noreferrer" download="codise.apk">Descargar APK Oficial</a></li>
+            <li><a href="#" data-open-modal="apkModal">Instrucciones Instalación APK</a></li>
           </ul>
         </div>
 
@@ -589,7 +581,7 @@
     </div>
   </div>
 
-  <!-- 2. Modal Descarga APK Directo (Próximamente) -->
+  <!-- 2. Modal Descarga APK Directo -->
   <div class="modal-backdrop" id="apkModal">
     <div class="modal-container">
       <div class="modal-header">
@@ -602,34 +594,48 @@
           </div>
           <div>
             <h3 class="modal-title">Descarga Directa de APK</h3>
-            <span class="legal-badge" style="background:rgba(16,185,129,0.15); color:#34d399; border-color:var(--glass-border-emerald); margin:0;">Versión v1.0.0 (Release Candidate)</span>
+            <span class="legal-badge" style="background:rgba(16,185,129,0.15); color:#34d399; border-color:var(--glass-border-emerald); margin:0;">Versión Oficial • Último Release</span>
           </div>
         </div>
         <button class="modal-close-btn" data-close-modal>&times;</button>
       </div>
       <div class="modal-body">
         <p style="font-size:1.05rem; color:#f1f5f9; margin-bottom:1rem;">
-          <strong>Compilación de producción en proceso</strong>
+          <strong>Descarga e instalación de la aplicación Codice路</strong>
         </p>
         <p>
-          El paquete instalable <code>.apk</code> oficial de Codice路 está finalizando su suite de compilación segura y pruebas de integración con el backend Django.
+          Obtén siempre la versión más reciente del paquete <code>codise.apk</code> compilado oficialmente desde el repositorio GitHub.
         </p>
-        <ul style="margin-left:1.5rem; margin-bottom:1.5rem; color:var(--text-muted);">
-          <li>Paquete firmado con SHA-256 para integridad de la aplicación.</li>
-          <li>Optimizado para Android 8.0 Oreo en adelante.</li>
-          <li>Soporte de geolocalización GPS de precisión e inicio de sesión con Google.</li>
-        </ul>
-        <div style="background:rgba(16,185,129,0.08); border:1px solid var(--glass-border-emerald); padding:1rem; border-radius:12px;">
-          <h5 style="color:#34d399; margin-bottom:0.3rem;">Acceso anticipado a la APK:</h5>
-          <p style="font-size:0.88rem; margin:0;">
-            Suscríbete con tu correo y recibirás el enlace de descarga directa en cuanto se publique el archivo binario oficial.
-          </p>
+
+        <div style="text-align: center; margin: 1.5rem 0;">
+          <a href="https://github.com/ader999/CodiceLuAppMovil/releases/latest/download/codise.apk"
+             class="btn btn-primary"
+             style="display:inline-flex; align-items:center; justify-content:center; gap:10px; font-weight:700; font-size:1rem; padding:13px 26px; background:linear-gradient(135deg,#059669,#10b981); color:#ffffff; text-decoration:none; border-radius:12px; box-shadow:0 8px 20px rgba(16,185,129,0.35); transition:all 0.2s ease;"
+             download="codise.apk" target="_blank" rel="noopener noreferrer">
+            <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+            </svg>
+            Descargar codise.apk (Última Versión)
+          </a>
         </div>
 
-        <form class="notify-form" style="margin-top:1.5rem;">
-          <input type="email" class="notify-input" placeholder="Tu correo electrónico..." required>
-          <button type="submit" class="notify-btn" style="background:linear-gradient(135deg,#059669,#10b981);">Registrar para APK</button>
-        </form>
+        <ul style="margin-left:1.5rem; margin-bottom:1.5rem; color:var(--text-muted);">
+          <li><strong>Actualizaciones continuas:</strong> Este enlace descarga en todo momento el paquete de producción más reciente.</li>
+          <li>Paquete firmado y verificado para la integridad de la aplicación.</li>
+          <li>Optimizado para Android 8.0 Oreo en adelante.</li>
+          <li>Soporte de geolocalización GPS de precisión e integración con backend Django.</li>
+        </ul>
+
+        <div
+          style="background:rgba(16,185,129,0.08); border:1px solid var(--glass-border-emerald); padding:1.1rem; border-radius:12px;">
+          <h5 style="color:#34d399; margin-bottom:0.4rem; font-size:0.95rem;">Instrucciones para instalar en Android:</h5>
+          <ol style="margin-left:1.2rem; margin-bottom:0; font-size:0.88rem; color:var(--text-muted); line-height:1.6;">
+            <li>Presiona el botón <em>Descargar codise.apk</em> para bajar el archivo instalable.</li>
+            <li>Al finalizar la descarga, pulsa la notificación o ubica el archivo en tu carpeta <em>Descargas</em>.</li>
+            <li>Si el sistema lo solicita, activa el permiso para instalar aplicaciones desde esta fuente o navegador.</li>
+            <li>Completa la instalación y disfruta de Codice路.</li>
+          </ol>
+        </div>
       </div>
       <div class="modal-footer">
         <button class="btn btn-secondary" data-close-modal>Cerrar</button>
