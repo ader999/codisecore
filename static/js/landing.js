@@ -219,4 +219,63 @@ document.addEventListener('DOMContentLoaded', () => {
   
   checkUrlHash();
   window.addEventListener('hashchange', checkUrlHash);
+
+  // 10. Notificación amigable al iniciar descarga de APK
+  const apkDownloadLinks = document.querySelectorAll('a[href*="codise.apk"]');
+  apkDownloadLinks.forEach(link => {
+    link.addEventListener('click', () => {
+      showToast('Descargando la versión más reciente de Codice路 (codise.apk)...', 'success');
+    });
+  });
+
+  // 11. Interactividad del Mockup del Teléfono (Cambio de Vistas y Microinteracciones)
+  const switcherBtns = document.querySelectorAll('.switcher-btn');
+  const viewPanes = document.querySelectorAll('.mockup-view-pane');
+  const hotspots = document.querySelectorAll('.phone-touch-hotspot');
+
+  function switchPhoneView(targetView) {
+    switcherBtns.forEach(btn => {
+      const isActive = btn.getAttribute('data-view') === targetView;
+      btn.classList.toggle('active', isActive);
+      btn.setAttribute('aria-selected', isActive ? 'true' : 'false');
+    });
+
+    viewPanes.forEach(pane => {
+      const isTarget = pane.getAttribute('data-pane') === targetView;
+      pane.classList.toggle('active', isTarget);
+    });
+  }
+
+  switcherBtns.forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      const targetView = btn.getAttribute('data-view');
+      switchPhoneView(targetView);
+    });
+  });
+
+  hotspots.forEach(hotspot => {
+    hotspot.addEventListener('click', () => {
+      const targetView = hotspot.getAttribute('data-switch-to');
+      if (targetView) {
+        switchPhoneView(targetView);
+      }
+    });
+  });
+
+  // Reacción interactiva a los Granos de Café en el feed
+  const coffeeHotspot = document.getElementById('feedCoffeeHotspot');
+  if (coffeeHotspot) {
+    coffeeHotspot.addEventListener('click', () => {
+      const particle = coffeeHotspot.querySelector('.coffee-pop-particle');
+      if (particle) {
+        particle.classList.remove('pop');
+        void particle.offsetWidth;
+        particle.classList.add('pop');
+        showToast('¡Has premiado esta publicación con +1 Grano de Café! ☕', 'success');
+        setTimeout(() => particle.classList.remove('pop'), 900);
+      }
+    });
+  }
 });
+
