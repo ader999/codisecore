@@ -992,7 +992,8 @@ class AsistenteVirtualApiTests(APITestCase):
                 {"nombre": "buscar_circuitos", "argumentos": {"ciudad": "Granada"}}
             ],
             "modelo_utilizado": "gemini-3.1-flash-lite",
-            "idioma": "es"
+            "idioma": "es",
+            "puntos_interes_ids": [self.punto.id]
         }
 
         payload = {
@@ -1006,11 +1007,76 @@ class AsistenteVirtualApiTests(APITestCase):
         self.assertIn("respuesta", res.data)
         self.assertEqual(res.data["modelo_utilizado"], "gemini-3.1-flash-lite")
         self.assertEqual(len(res.data["herramientas_utilizadas"]), 1)
+        self.assertEqual(res.data.get("puntos_interes_ids"), [self.punto.id])
 
         # Probar también el endpoint alias /api/asistente/
         res_alias = self.client.post(self.chat_alias_url, payload, format='json')
         self.assertEqual(res_alias.status_code, status.HTTP_200_OK)
         self.assertEqual(res_alias.data["respuesta"], res.data["respuesta"])
+        self.assertEqual(res_alias.data["puntos_interes_ids"], [self.punto.id])
+
+    def test_extraccion_puntos_interes_con_etiqueta_valida(self):
+        from codiselu.asistente_service import AsistenteVirtualService
+        servicio = AsistenteVirtualService()
+
+        texto_original = (
+            "En Granada te recomiendo visitar:\n"
+            f"* **Parque Central**: corazón de la ciudad.\n\n"
+            f"<!-- PUNTOS_INTERES_IDS: [{self.punto.id}, 99999] -->"
+        )
+        texto_limpio, ids = servicio.extraer_puntos_interes_ids(texto_original)
+        # La etiqueta debe ser removida
+        self.assertNotIn("<!-- PUNTOS_INTERES_IDS:", texto_limpio)
+        self.assertIn("Parque Central", texto_limpio)
+        # El ID válido debe incluirse y el ID inexistente 99999 debe ser descartado
+        self.assertEqual(ids, [self.punto.id])
+
+    def test_extraccion_puntos_interes_fallback_por_nombre(self):
+        from codiselu.asistente_service import AsistenteVirtualService
+        servicio = AsistenteVirtualService()
+
+        # Sin etiqueta HTML pero mencionando el nombre del punto de interés
+        texto_sin_etiqueta = "Te recomiendo visitar el Parque Central para disfrutar el ambiente local."
+        texto_limpio, ids = servicio.extraer_puntos_interes_ids(texto_sin_etiqueta)
+        self.assertEqual(texto_limpio, texto_sin_etiqueta)
+        self.assertEqual(ids, [self.punto.id])
+
+    def test_extraccion_sin_puntos(self):
+        from codiselu.asistente_service import AsistenteVirtualService
+        servicio = AsistenteVirtualService()
+
+        texto_saludo = "¡Hola! Soy Eduardo, tu asistente turístico. ¿En qué te puedo ayudar?"
+        texto_limpio, ids = servicio.extraer_puntos_interes_ids(texto_saludo)
+        self.assertEqual(texto_limpio, texto_saludo)
+        self.assertEqual(ids, [])
+
+    def test_punto_interes_viewset_filtro_ids(self):
+        # Crear un segundo punto para verificar que el filtro funciona
+        from codiselu.models import PuntoInteres
+        punto_dos = PuntoInteres.objects.create(
+            circuito=self.circuito,
+            nombre="Catedral de Granada",
+            descripcion="Catedral amarilla icónica",
+            tipo="Historico",
+            orden=2,
+            latitud=11.9348,
+            longitud=-85.9555
+        )
+
+        url_todos = reverse('puntointeres-list')
+        res_todos = self.client.get(url_todos)
+        self.assertGreaterEqual(len(res_todos.data), 2)
+
+        # Filtrar solo por el primer punto
+        res_filtrado = self.client.get(f"{url_todos}?ids={self.punto.id}")
+        self.assertEqual(res_filtrado.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(res_filtrado.data), 1)
+        self.assertEqual(res_filtrado.data[0]['id'], self.punto.id)
+
+        # Filtrar por ambos puntos en lista separada por comas
+        res_ambos = self.client.get(f"{url_todos}?ids={self.punto.id},{punto_dos.id}")
+        self.assertEqual(res_ambos.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(res_ambos.data), 2)
 
     def test_asistente_fallback_logica(self):
         from codiselu.asistente_service import AsistenteVirtualService
@@ -1034,6 +1100,30 @@ class AsistenteVirtualApiTests(APITestCase):
                 resultado = servicio.procesar_mensaje(mensaje="Hola")
                 self.assertEqual(resultado['modelo_utilizado'], 'gemini-3.8-flash')
                 self.assertEqual(resultado['respuesta'], "Respuesta generada por modelo de respaldo")
+                self.assertIn('puntos_interes_ids', resultado)
+                self.assertEqual(resultado['puntos_interes_ids'], [])
+
+
+class HealthCheckEndpointTests(APITestCase):
+    """
+    Pruebas unitarias para los endpoints de salud y diagnóstico (Health Check).
+    """
+
+    def test_health_check_endpoint(self):
+        url = reverse('api_health_check')
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data.get('status'), 'healthy')
+        self.assertEqual(response.data.get('service'), 'codisecore')
+        self.assertIn('checks', response.data)
+        self.assertEqual(response.data['checks'].get('database'), 'connected')
+
+    def test_root_health_check_endpoint(self):
+        url = reverse('health_check')
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data.get('status'), 'healthy')
+
 
 
 

@@ -4,11 +4,14 @@ Implementa Function Calling / Tool Calling para interactuar con la base de datos
 con soporte multi-idioma, fallback de modelos y geolocalización.
 """
 
+import re
+import unicodedata
 import logging
 from typing import Optional, List, Dict, Any, Tuple
 from django.conf import settings
 from google import genai
 from google.genai import types
+from .models import PuntoInteres
 from .asistente_tools import TODAS_LAS_HERRAMIENTAS
 
 logger = logging.getLogger(__name__)
@@ -38,6 +41,14 @@ REGLAS DE ACTUACIÓN:
 4. IDIOMA Y CULTURA: Responde SIEMPRE en el idioma indicado por el usuario (Español, Inglés o Chino Mandarín). Si el usuario escribe en inglés, responde en inglés; si escribe en mandarín, responde en mandarín.
 5. COORDENADAS Y DISTANCIAS: Si el usuario proporciona su ubicación geográfica y pregunta por lugares cercanos, usa la herramienta `buscar_puntos_cercanos` e indícale las distancias aproximadas.
 6. FORMATO: Emplea un formato limpio, con viñetas claras, emojis alusivos y recomendaciones prácticas (duración, dificultad de senderos, precios si aplica).
+7. PUNTOS DE INTERÉS RECOMENDADOS (TARJETAS INTERACTIVAS MÓVILES): Cuando menciones o recomiendes uno o varios puntos de interés específicos (sitios turísticos, museos, monumentos, cascadas, iglesias, miradores o talleres artesanales consultados en tus herramientas), DEBES incluir al final de tu respuesta una etiqueta con los IDs numéricos exactos de dichos puntos recomendados, en el formato:
+<!-- PUNTOS_INTERES_IDS: [id1, id2, ...] -->
+Ejemplo: <!-- PUNTOS_INTERES_IDS: [4, 12, 18] -->
+Reglas estrictas para esta etiqueta:
+- Utiliza únicamente los números del campo `id` de los puntos retornados por las herramientas (como `buscar_puntos_interes` o `buscar_puntos_cercanos`).
+- No inventes IDs ni agregues IDs de lugares que no hayas mencionado o recomendado en tu texto.
+- Si en tu mensaje no recomiendas puntos de interés específicos (por ejemplo en un saludo, agradecimiento o respuesta conversacional general), omite la etiqueta o coloca <!-- PUNTOS_INTERES_IDS: [] -->.
+- Esta etiqueta se procesará internamente en el backend para generar tarjetas interactivas en la app Android y no será visible para el usuario final.
 """
 
     def __init__(self):
@@ -204,10 +215,105 @@ REGLAS DE ACTUACIÓN:
                 logger.error(f"Error también con modelo de respaldo '{modelo_activo}': {e_fallback}")
                 raise e_fallback
 
+        # Extraer puntos de interés recomendados para tarjetas interactivas y limpiar respuesta
+        texto_limpio, puntos_interes_ids = self.extraer_puntos_interes_ids(texto_respuesta)
+
         return {
             "nombre_asistente": "Eduardo",
-            "respuesta": texto_respuesta,
+            "respuesta": texto_limpio,
             "herramientas_utilizadas": herramientas,
             "modelo_utilizado": modelo_activo,
-            "idioma": idioma
+            "idioma": idioma,
+            "puntos_interes_ids": puntos_interes_ids
         }
+
+    @staticmethod
+    def _normalizar_texto(texto: str) -> str:
+        """Normaliza texto eliminando acentos, caracteres especiales y convirtiendo a minúsculas."""
+        if not texto:
+            return ""
+        nfkd = unicodedata.normalize('NFKD', texto)
+        sin_tildes = "".join([c for c in nfkd if not unicodedata.combining(c)])
+        limpio = re.sub(r'[^\w\s]', ' ', sin_tildes.lower())
+        return re.sub(r'\s+', ' ', limpio).strip()
+
+    def extraer_puntos_interes_ids(self, texto_respuesta: str) -> Tuple[str, List[int]]:
+        """
+        Extrae los IDs numéricos de los PuntoInteres mencionados o recomendados en la respuesta.
+        
+        1. Busca etiquetas explícitas del modelo (ej: <!-- PUNTOS_INTERES_IDS: [4, 12, 18] -->)
+           y las remueve del texto para mantener el Markdown limpio para la app móvil.
+        2. Aplica fallback heurístico por detección de nombres de puntos de interés presentes en el texto.
+        3. Valida todos los IDs contra la base de datos para garantizar su existencia y consistencia.
+        """
+        if not texto_respuesta:
+            return texto_respuesta, []
+
+        candidate_ids: List[int] = []
+        texto_limpio = texto_respuesta
+
+        # 1. Extracción de etiqueta HTML oculta <!-- PUNTOS_INTERES_IDS: [...] -->
+        tag_pattern = re.compile(r'<!--\s*PUNTOS_INTERES_IDS:\s*\[?(.*?)\]?\s*-->', re.IGNORECASE)
+        matches = tag_pattern.findall(texto_limpio)
+        if matches:
+            for raw_content in matches:
+                found_numbers = re.findall(r'\b\d+\b', raw_content)
+                candidate_ids.extend([int(n) for n in found_numbers])
+            texto_limpio = tag_pattern.sub('', texto_limpio).rstrip()
+
+        # 1.b Soporte alternativo para formato entre corchetes [PUNTOS_INTERES_IDS: 4, 12]
+        alt_pattern = re.compile(r'\[\s*PUNTOS_INTERES_IDS:\s*\[?(.*?)\]?\s*\]', re.IGNORECASE)
+        alt_matches = alt_pattern.findall(texto_limpio)
+        if alt_matches:
+            for raw_content in alt_matches:
+                found_numbers = re.findall(r'\b\d+\b', raw_content)
+                candidate_ids.extend([int(n) for n in found_numbers])
+            texto_limpio = alt_pattern.sub('', texto_limpio).rstrip()
+
+        # 2. Fallback / Complementario por coincidencia de nombres en la base de datos
+        try:
+            norm_texto = self._normalizar_texto(texto_limpio)
+            if norm_texto:
+                # Obtenemos los puntos de interés con sus nombres en los idiomas disponibles
+                puntos_db = PuntoInteres.objects.all().values_list('id', 'nombre', 'nombre_en', 'nombre_zh')
+                
+                # Lista de tuplas (posicion_en_texto, punto_id) para ordenar por aparición
+                menciones_por_posicion = []
+
+                for pid, nombre, nombre_en, nombre_zh in puntos_db:
+                    nombres_candidatos = [n for n in (nombre, nombre_en, nombre_zh) if n]
+                    for nom in nombres_candidatos:
+                        norm_nom = self._normalizar_texto(nom)
+                        # Evitar falsos positivos con palabras demasiado cortas o genéricas (< 4 caracteres)
+                        if len(norm_nom) >= 4:
+                            patron = r'\b' + re.escape(norm_nom) + r'\b'
+                            match_mencion = re.search(patron, norm_texto)
+                            if match_mencion:
+                                menciones_por_posicion.append((match_mencion.start(), pid))
+                                break
+
+                # Ordenar los puntos encontrados por orden de aparición en el texto
+                menciones_por_posicion.sort(key=lambda x: x[0])
+                for _, pid in menciones_por_posicion:
+                    if pid not in candidate_ids:
+                        candidate_ids.append(pid)
+        except Exception as e_scan:
+            logger.debug(f"Error durante el escaneo de nombres de puntos de interés: {e_scan}")
+
+        # 3. Validación de integridad en base de datos
+        if not candidate_ids:
+            return texto_limpio, []
+
+        try:
+            valid_ids_set = set(
+                PuntoInteres.objects.filter(id__in=candidate_ids).values_list('id', flat=True)
+            )
+            # Deduplicar preservando el orden
+            puntos_interes_ids = []
+            for pid in candidate_ids:
+                if pid in valid_ids_set and pid not in puntos_interes_ids:
+                    puntos_interes_ids.append(pid)
+            return texto_limpio, puntos_interes_ids
+        except Exception as e_val:
+            logger.error(f"Error al validar IDs de puntos de interés en la base de datos: {e_val}")
+            return texto_limpio, []
