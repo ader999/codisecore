@@ -262,6 +262,18 @@ class PuntoInteresViewSet(viewsets.ModelViewSet):
     serializer_class = PuntoInteresSerializer
     permission_classes = [permissions.AllowAny]
 
+    def get_queryset(self):
+        qs = super().get_queryset()
+        ids_param = self.request.query_params.get('ids')
+        if ids_param:
+            try:
+                ids_list = [int(x.strip()) for x in ids_param.split(',') if x.strip().isdigit()]
+                if ids_list:
+                    return qs.filter(id__in=ids_list)
+            except Exception:
+                pass
+        return qs
+
 
 class DatoHistoricoViewSet(viewsets.ModelViewSet):
     queryset = DatoHistorico.objects.all().order_by('id')
@@ -697,3 +709,37 @@ class AsistenteChatView(APIView):
                 },
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+
+
+class HealthCheckView(APIView):
+    """
+    Endpoint de monitoreo y verificación de salud de la plataforma (Health Check).
+    Permite a los orquestadores (Docker, Kubernetes, Railway, Render, Cloud Run, AWS ECS)
+    y balanceadores de carga monitorear la disponibilidad del servicio y la conectividad con la base de datos.
+    """
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request, *args, **kwargs):
+        from django.db import connection
+        from django.utils import timezone
+
+        health_data = {
+            "status": "healthy",
+            "service": "codisecore",
+            "version": "1.0.0",
+            "timestamp": timezone.now().isoformat(),
+            "environment": "production" if not settings.DEBUG else "development",
+            "checks": {
+                "database": "unknown"
+            }
+        }
+
+        try:
+            connection.ensure_connection()
+            health_data["checks"]["database"] = "connected"
+            return Response(health_data, status=status.HTTP_200_OK)
+        except Exception as exc:
+            health_data["status"] = "unhealthy"
+            health_data["checks"]["database"] = f"disconnected: {str(exc)}"
+            return Response(health_data, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+

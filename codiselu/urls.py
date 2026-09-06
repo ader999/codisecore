@@ -24,7 +24,8 @@ from .views import (
     PublicacionViewSet,
     ComentarioPublicacionViewSet,
     LandingPageView,
-    AsistenteChatView
+    AsistenteChatView,
+    HealthCheckView
 )
 
 router = DefaultRouter()
@@ -49,6 +50,8 @@ urlpatterns = [
     path('landing/', LandingPageView.as_view(), name='landing_page'),
     path('terminos/', LandingPageView.as_view(), name='terminos_condiciones'),
     path('privacidad/', LandingPageView.as_view(), name='terminos_privacidad'),
+    path('health/', HealthCheckView.as_view(), name='health_check'),
+    path('api/health/', HealthCheckView.as_view(), name='api_health_check'),
     path('admin/', admin.site.urls),
     path('api/auth/register/', RegisterView.as_view(), name='auth_register'),
     path('api/auth/login/', LoginView.as_view(), name='auth_login'),

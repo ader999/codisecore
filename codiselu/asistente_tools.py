@@ -95,7 +95,9 @@ def buscar_circuitos(
         
     resultados = []
     for cir in qs[:10]:
-        puntos = [p.nombre for p in cir.puntos_interes.all()[:5]]
+        puntos_qs = cir.puntos_interes.all()[:5]
+        puntos = [p.nombre for p in puntos_qs]
+        puntos_detalle = [{"id": p.id, "nombre": p.nombre, "tipo": p.tipo} for p in puntos_qs]
         resultados.append({
             "id": cir.id,
             "nombre": cir.nombre,
@@ -107,6 +109,7 @@ def buscar_circuitos(
             "duracion_estimada": cir.duracion_estimada,
             "dificultad": cir.dificultad,
             "puntos_clave": puntos,
+            "puntos_detalle": puntos_detalle,
             "total_puntos": cir.puntos_interes.count()
         })
     return resultados
@@ -328,6 +331,7 @@ def buscar_datos_historicos(
             "epoca_o_ano": d.epoca_o_ano,
             "ciudad": ciudad_nombre,
             "punto_interes": d.punto_interes.nombre if d.punto_interes else None,
+            "punto_interes_id": d.punto_interes_id if d.punto_interes else None,
             "contenido": d.contenido
         })
     return resultados

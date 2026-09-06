@@ -18,6 +18,7 @@
 [![Django Version](https://img.shields.io/badge/django-v6.0-green.svg)](https://www.djangoproject.com/)
 [![DRF Version](https://img.shields.io/badge/DRF-v3.15-red.svg)](https://www.django-rest-framework.org/)
 [![Docker Ready](https://img.shields.io/badge/docker-ready-blue.svg)](https://www.docker.com/)
+[![Deploy: Production Ready](https://img.shields.io/badge/Deploy-Production%20Ready-success.svg)](GUIA_DESPLIEGUE_PRODUCCION.md)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Status](https://img.shields.io/badge/status-active-brightgreen.svg)]()
 
@@ -382,6 +383,9 @@ DATA_UPLOAD_MAX_NUMBER_FIELDS=2000
 ---
 
 ## 6. Scripts y Comandos de Administracion
+
+> **Guía Completa de Despliegue en Producción:**  
+> Para consultar la arquitectura detallada de infraestructura, el checklist de preparación rigurosa (`check --deploy`), endpoints de diagnóstico (`/api/health/`), respaldo de bases de datos y playbooks paso a paso (Docker Compose, PaaS Railway/Render y VPS Linux), consulta el [Manual de Despliegue en Producción](GUIA_DESPLIEGUE_PRODUCCION.md).
 
 ### 6.1. Despliegue con Docker y Docker Compose
 
