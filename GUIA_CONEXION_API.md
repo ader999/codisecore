@@ -948,7 +948,8 @@ A diferencia de un bot genérico, **Eduardo** tiene acceso directo a la base de 
     }
   ],
   "modelo_utilizado": "gemini-3.1-flash-lite",
-  "idioma": "es"
+  "idioma": "es",
+  "puntos_interes_ids": [1, 2]
 }
 ```
 
@@ -984,7 +985,8 @@ Cuando el usuario permite permisos de ubicación en Android/iOS, la app puede ad
     }
   ],
   "modelo_utilizado": "gemini-3.1-flash-lite",
-  "idioma": "es"
+  "idioma": "es",
+  "puntos_interes_ids": [5, 8, 14]
 }
 ```
 
@@ -1070,7 +1072,8 @@ data class ChatResponse(
     val respuesta: String,
     val herramientas_utilizadas: List<Map<String, Any>>,
     val modelo_utilizado: String,
-    val idioma: String
+    val idioma: String,
+    val puntos_interes_ids: List<Int> = emptyList()
 )
 
 // 2. Definición del servicio Retrofit
@@ -1080,6 +1083,12 @@ interface AsistenteApiService {
         @Header("Authorization") authHeader: String? = null,
         @Body request: ChatRequest
     ): retrofit2.Response<ChatResponse>
+
+    // Obtener tarjetas interactivas de los puntos recomendados en lote:
+    @GET("api/puntos-interes/")
+    suspend fun obtenerTarjetasPuntos(
+        @Query("ids") idsCsv: String
+    ): retrofit2.Response<List<PuntoInteresDto>>
 }
 
 // 3. Llamada desde ViewModel o Repository
