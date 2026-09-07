@@ -395,7 +395,7 @@ class DatoHistoricoSerializer(TraduccionSerializerMixin, serializers.ModelSerial
 class GaleriaMultimediaSerializer(serializers.ModelSerializer):
     class Meta:
         model = GaleriaMultimedia
-        fields = ['id', 'ciudad', 'punto_interes', 'evento', 'titulo', 'tipo', 'imagen', 'video_url']
+        fields = ['id', 'ciudad', 'punto_interes', 'evento', 'titulo', 'tipo', 'imagen', 'video_archivo', 'video_url']
 
 
 class PuntoInteresSerializer(TraduccionSerializerMixin, serializers.ModelSerializer):
