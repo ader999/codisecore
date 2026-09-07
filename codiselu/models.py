@@ -1,6 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser
 from django.conf import settings
+from django.core.validators import FileExtensionValidator
 
 class User(AbstractUser):
     es_protagonista = models.BooleanField(default=False)
@@ -144,7 +145,14 @@ class GaleriaMultimedia(models.Model):
     evento = models.ForeignKey('Evento', related_name='galeria', on_delete=models.CASCADE, null=True, blank=True)
     titulo = models.CharField(max_length=150, blank=True, null=True)
     tipo = models.CharField(max_length=10, choices=TIPO_CHOICES, default='Imagen')
-    imagen = models.ImageField(upload_to='galeria/imagenes/', blank=True, null=True)
+    imagen = models.ImageField(upload_to='galeria/imagenes/', blank=True, null=True, help_text="Archivo de imagen (jpg, png, webp, etc.)")
+    video_archivo = models.FileField(
+        upload_to='galeria/videos/',
+        blank=True,
+        null=True,
+        validators=[FileExtensionValidator(allowed_extensions=['mp4', 'mov', 'avi', 'mkv', 'webm', 'wmv', 'flv', 'm4v'])],
+        help_text="Archivo de video local (mp4, mov, avi, webm, etc.)"
+    )
     video_url = models.URLField(blank=True, null=True, help_text="URL de YouTube, Vimeo o servidor de video")
 
     class Meta:

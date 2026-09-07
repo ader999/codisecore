@@ -27,6 +27,7 @@ class DatoHistoricoInline(admin.TabularInline):
 class GaleriaMultimediaInline(admin.TabularInline):
     model = GaleriaMultimedia
     extra = 1
+    fields = ('titulo', 'tipo', 'imagen', 'video_archivo', 'video_url')
 
 
 @admin.register(Ciudad)
@@ -117,8 +118,20 @@ class DatoHistoricoAdmin(admin.ModelAdmin):
 
 @admin.register(GaleriaMultimedia)
 class GaleriaMultimediaAdmin(admin.ModelAdmin):
-    list_display = ('titulo', 'tipo', 'ciudad', 'punto_interes', 'evento')
+    list_display = ('titulo', 'tipo', 'ciudad', 'punto_interes', 'evento', 'recurso_multimedia')
     list_filter = ('tipo', 'ciudad', 'evento')
+    search_fields = ('titulo', 'ciudad__nombre', 'punto_interes__nombre', 'evento__titulo')
+    fields = ('ciudad', 'punto_interes', 'evento', 'titulo', 'tipo', 'imagen', 'video_archivo', 'video_url')
+
+    def recurso_multimedia(self, obj):
+        if obj.tipo == 'Imagen':
+            return "✓ Imagen subida" if obj.imagen else "Sin archivo"
+        if obj.video_archivo:
+            return "✓ Video subido"
+        if obj.video_url:
+            return f"✓ URL ({obj.video_url[:30]}...)" if len(obj.video_url) > 30 else f"✓ URL ({obj.video_url})"
+        return "Sin recurso"
+    recurso_multimedia.short_description = "Recurso"
 
 
 @admin.register(UsuarioPuntoVisitado)

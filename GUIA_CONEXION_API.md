@@ -295,7 +295,8 @@ Al consumir el endpoint de ciudades, la respuesta incluye automáticamente toda 
         "punto_interes": null,
         "titulo": "Panorámica del Centro Histórico de León",
         "tipo": "Imagen",
-        "imagen": null,
+        "imagen": "http://localhost:8000/media/galeria/imagenes/leon_centro.jpg",
+        "video_archivo": null,
         "video_url": null
       },
       {
@@ -305,6 +306,7 @@ Al consumir el endpoint de ciudades, la respuesta incluye automáticamente toda 
         "titulo": "Documental: León, Cuna de la Revolución y Poesía",
         "tipo": "Video",
         "imagen": null,
+        "video_archivo": "http://localhost:8000/media/galeria/videos/leon_doc.mp4",
         "video_url": "https://www.youtube.com/watch?v=ejemplo_leon_creativo"
       }
     ]
