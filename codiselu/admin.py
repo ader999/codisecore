@@ -7,6 +7,11 @@ from .models import (
     ComentarioPublicacion
 )
 
+# Personalización del Panel de Control Codice路
+admin.site.site_header = "Codice路"
+admin.site.site_title = "Codice路"
+admin.site.index_title = "Panel de Control Codice路"
+
 @admin.register(User)
 class UserAdmin(BaseUserAdmin):
     list_display = ('username', 'email', 'first_name', 'last_name', 'es_protagonista', 'es_turista', 'is_staff')
@@ -19,9 +24,32 @@ class UserAdmin(BaseUserAdmin):
     )
 
 
+class OcultarTraduccionesAlCrearMixin:
+    """
+    Mixin para ModelAdmin que oculta las secciones de traducción (Inglés y Mandarín)
+    durante la creación inicial de un registro (obj is None) para evitar confusión al usuario.
+    El sistema autocompleta las traducciones al guardar mediante save().
+    Una vez guardado el registro (obj is not None), se muestran las secciones de traducción
+    para que puedan ser revisadas o editadas manualmente.
+    """
+    def get_fieldsets(self, request, obj=None):
+        fieldsets = super().get_fieldsets(request, obj)
+        if obj is None:
+            return [
+                fs for fs in fieldsets
+                if not any(kw in fs[0].lower() for kw in ['inglés', 'ingles', 'mandarín', 'mandarin', 'traducción', 'traduccion'])
+            ]
+        return fieldsets
+
+
 class DatoHistoricoInline(admin.TabularInline):
     model = DatoHistorico
     extra = 1
+
+    def get_fields(self, request, obj=None):
+        if obj is None:
+            return ('titulo', 'tipo', 'contenido', 'epoca_o_ano')
+        return ('titulo', 'tipo', 'contenido', 'epoca_o_ano', 'titulo_en', 'titulo_zh', 'contenido_en', 'contenido_zh')
 
 
 class GaleriaMultimediaInline(admin.TabularInline):
@@ -31,7 +59,7 @@ class GaleriaMultimediaInline(admin.TabularInline):
 
 
 @admin.register(Ciudad)
-class CiudadAdmin(admin.ModelAdmin):
+class CiudadAdmin(OcultarTraduccionesAlCrearMixin, admin.ModelAdmin):
     list_display = ('nombre', 'nombre_en', 'nombre_zh', 'latitud_centro', 'longitud_centro', 'ver_circuitos')
     search_fields = ('nombre', 'nombre_en', 'nombre_zh')
     inlines = [DatoHistoricoInline, GaleriaMultimediaInline]
@@ -56,7 +84,7 @@ class CiudadAdmin(admin.ModelAdmin):
 
 
 @admin.register(CircuitoCreativo)
-class CircuitoCreativoAdmin(admin.ModelAdmin):
+class CircuitoCreativoAdmin(OcultarTraduccionesAlCrearMixin, admin.ModelAdmin):
     list_display = ('nombre', 'ciudad', 'distancia_km', 'duracion_estimada', 'dificultad')
     list_filter = ('ciudad', 'dificultad')
     search_fields = ('nombre', 'nombre_en', 'nombre_zh', 'descripcion')
@@ -76,7 +104,7 @@ class CircuitoCreativoAdmin(admin.ModelAdmin):
 
 
 @admin.register(PuntoInteres)
-class PuntoInteresAdmin(admin.ModelAdmin):
+class PuntoInteresAdmin(OcultarTraduccionesAlCrearMixin, admin.ModelAdmin):
     list_display = ('orden', 'nombre', 'circuito', 'tipo')
     list_filter = ('tipo', 'circuito__ciudad')
     search_fields = ('nombre', 'nombre_en', 'nombre_zh', 'descripcion')
@@ -97,7 +125,7 @@ class PuntoInteresAdmin(admin.ModelAdmin):
 
 
 @admin.register(DatoHistorico)
-class DatoHistoricoAdmin(admin.ModelAdmin):
+class DatoHistoricoAdmin(OcultarTraduccionesAlCrearMixin, admin.ModelAdmin):
     list_display = ('titulo', 'tipo', 'epoca_o_ano', 'ciudad', 'punto_interes')
     list_filter = ('tipo', 'ciudad')
     search_fields = ('titulo', 'titulo_en', 'titulo_zh', 'contenido')
@@ -146,9 +174,23 @@ class OportunidadInversionInline(admin.TabularInline):
     model = OportunidadInversion
     extra = 1
 
+    def get_fields(self, request, obj=None):
+        if obj is None:
+            return (
+                'titulo', 'descripcion', 'monto_requerido',
+                'monto_minimo_inversion', 'monto_recaudado', 'retorno_estimado',
+                'tipo_inversor_permitido', 'esta_activa'
+            )
+        return (
+            'titulo', 'titulo_en', 'titulo_zh',
+            'descripcion', 'descripcion_en', 'descripcion_zh',
+            'monto_requerido', 'monto_minimo_inversion', 'monto_recaudado',
+            'retorno_estimado', 'tipo_inversor_permitido', 'esta_activa'
+        )
+
 
 @admin.register(Empresa)
-class EmpresaAdmin(admin.ModelAdmin):
+class EmpresaAdmin(OcultarTraduccionesAlCrearMixin, admin.ModelAdmin):
     list_display = ('id', 'nombre', 'usuario', 'categoria', 'ciudad', 'acepta_inversiones', 'fecha_creacion')
     list_filter = ('acepta_inversiones', 'categoria', 'ciudad')
     search_fields = ('nombre', 'nombre_en', 'nombre_zh', 'descripcion', 'usuario__username')
@@ -173,7 +215,7 @@ class EmpresaAdmin(admin.ModelAdmin):
 
 
 @admin.register(OportunidadInversion)
-class OportunidadInversionAdmin(admin.ModelAdmin):
+class OportunidadInversionAdmin(OcultarTraduccionesAlCrearMixin, admin.ModelAdmin):
     list_display = ('id', 'titulo', 'empresa', 'monto_requerido', 'monto_recaudado', 'tipo_inversor_permitido', 'esta_activa')
     list_filter = ('esta_activa', 'tipo_inversor_permitido', 'empresa__ciudad')
     search_fields = ('titulo', 'titulo_en', 'titulo_zh', 'descripcion', 'empresa__nombre')
@@ -209,7 +251,7 @@ class EventoAsistenciaInline(admin.TabularInline):
 
 
 @admin.register(Evento)
-class EventoAdmin(admin.ModelAdmin):
+class EventoAdmin(OcultarTraduccionesAlCrearMixin, admin.ModelAdmin):
     list_display = ('id', 'titulo', 'creador', 'empresa', 'ciudad', 'fecha_inicio', 'total_granos_cafe', 'total_asistentes', 'es_oficial', 'esta_activo')
     list_filter = ('es_oficial', 'esta_activo', 'es_gratuito', 'ciudad', 'fecha_inicio')
     search_fields = ('titulo', 'titulo_en', 'titulo_zh', 'descripcion', 'ubicacion', 'creador__username', 'empresa__nombre')

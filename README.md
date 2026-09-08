@@ -91,7 +91,7 @@ La API atiende solicitudes desde clientes moviles nativos (Kotlin / Android), ap
 ```text
 +-------------------------------------------------------------------------+
 |                           CAPA DE CLIENTES                              |
-|   App Movil Android (Kotlin)   |   Cliente Web   |   Panel Admin Django |
+|   App Movil Android (Kotlin)   |   Cliente Web   | Panel Control Codice路|
 +------------------------------------+--------------------+---------------+
                                      |
                                      | HTTP / HTTPS (REST JSON & Multipart)
@@ -249,7 +249,7 @@ codisecore/
 │   ├── models.py                  # Definicion de los 13 modelos de datos del sistema
 │   ├── serializers.py             # Serializadores de DRF, validaciones y calculo Haversine
 │   ├── views.py                   # ViewSets, Generics, APIs y logica de negocio
-│   ├── admin.py                   # Configuracion del panel de administracion de Django
+│   ├── admin.py                   # Configuracion del panel de administracion Codice路
 │   ├── apps.py                    # Configuracion de la aplicacion Django
 │   └── migrations/                # Scripts de migracion de esquema de base de datos
 ├── nginx/                         # Configuracion del servidor Web / Reverse Proxy
