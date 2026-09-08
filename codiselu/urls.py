@@ -47,6 +47,11 @@ router.register(r'eventos', EventoViewSet, basename='evento')
 router.register(r'publicaciones', PublicacionViewSet, basename='publicacion')
 router.register(r'comentarios-publicaciones', ComentarioPublicacionViewSet, basename='comentario-publicacion')
 
+# Configuración del Panel de Control Codice路
+admin.site.site_header = "Codice路"
+admin.site.site_title = "Codice路"
+admin.site.index_title = "Panel de Control Codice路"
+
 urlpatterns = [
     path('', LandingPageView.as_view(), name='landing'),
     path('landing/', LandingPageView.as_view(), name='landing_page'),

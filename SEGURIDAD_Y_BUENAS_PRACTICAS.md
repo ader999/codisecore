@@ -175,7 +175,7 @@ graph TD
     Anon -->|Lectura| Pub[Catálogo de Ciudades, Circuitos y Eventos]
     Turista -->|Escritura| Vis[Registrar Visitas, Reseñas, Likes e Inversiones]
     Protagonista -->|Gestión| Emp[Gestionar Empresas, Oportunidades de Inversión y Eventos Locales]
-    Staff -->|Control Total| Adm[Moderación, Eventos Oficiales, Control de Usuarios y Django Admin]
+    Staff -->|Control Total| Adm[Moderación, Eventos Oficiales, Control de Usuarios y Panel de Control Codice路]
 ```
 
 | Rol | Identificador en Modelo | Permisos y Alcance |
@@ -183,7 +183,7 @@ graph TD
 | **Visitante Anónimo** | `is_authenticated == False` | Solo lectura (`GET`) en landing page, ciudades, circuitos y puntos turísticos. |
 | **Turista** | `es_turista == True` | Registro de visitas GPS, me gusta en mural, comentarios, postulación de inversiones personales y perfil propio. |
 | **Protagonista** | `es_protagonista == True` | Todo lo de turista + registro y edición de su Empresa, publicación de ofertas de inversión y eventos locales. |
-| **Administrador** | `is_staff == True` / `is_superuser == True` | Acceso a Django Admin, autorización de eventos oficiales de ciudad, gestión de usuarios y moderación total. |
+| **Administrador** | `is_staff == True` / `is_superuser == True` | Acceso al Panel de Control Codice路, autorización de eventos oficiales de ciudad, gestión de usuarios y moderación total. |
 
 ### 4.2. Clases de Permiso en Django REST Framework
 Las vistas y ViewSets se blindan mediante clases de permiso declarativas:
@@ -364,8 +364,8 @@ graph LR
 - **Lista Negra de Tokens (`BLACKLIST_AFTER_ROTATION = True`):** Si un token de refresco es utilizado más de una vez (intento de reutilización maliciosa), el sistema detecta la anomalía e invalida la cadena de tokens completa.
 - **Cierre de Sesión Seguro (Logout Endpoint):** El cliente envía su `refresh_token` actual al endpoint de logout, agregándolo inmediatamente a la lista negra en base de datos (`OutstandingToken` / `BlacklistedToken`).
 
-### 7.2. Manejo de Sesiones Web (Django Admin y Vistas Web)
-Para la interfaz web y el panel de administración de Django, se configuran directivas estrictas de sesión en `settings.py`:
+### 7.2. Manejo de Sesiones Web (Panel de Control Codice路 y Vistas Web)
+Para la interfaz web y el panel de control de Codice路, se configuran directivas estrictas de sesión en `settings.py`:
 
 ```python
 # Expiración por inactividad a los 30 minutos (1800 segundos)
