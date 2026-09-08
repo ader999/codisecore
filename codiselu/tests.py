@@ -1125,12 +1125,198 @@ class HealthCheckEndpointTests(APITestCase):
         self.assertEqual(response.data.get('status'), 'healthy')
 
 
+class CodiceAdminPanelTests(APITestCase):
+    """
+    Pruebas unitarias para validar la personalización del Panel de Control Codice路.
+    """
+
+    def test_admin_site_custom_titles(self):
+        from django.contrib import admin
+        self.assertEqual(admin.site.site_header, "Codice路")
+        self.assertEqual(admin.site.site_title, "Codice路")
+        self.assertEqual(admin.site.index_title, "Panel de Control Codice路")
+
+    def test_admin_login_page_renders_codice_branding(self):
+        response = self.client.get('/admin/login/')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        content = response.content.decode('utf-8')
+        self.assertIn('Codice路', content)
+        self.assertIn('logocodicelu', content)
+
+    def test_admin_index_page_renders_codice_branding(self):
+        admin_user = User.objects.create_superuser(
+            username='admin_branding_test',
+            email='admin_branding@example.com',
+            password='Password123!'
+        )
+        self.client.force_login(admin_user)
+        response = self.client.get('/admin/')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        content = response.content.decode('utf-8')
+        self.assertIn('Codice路', content)
+        self.assertIn('Panel de Control Codice路', content)
+        self.assertIn('logocodicelu', content)
 
 
+class AdminTraduccionesDinamicasTests(APITestCase):
+    """
+    Pruebas para verificar que los campos de traducción se ocultan al crear
+    un registro nuevo (obj is None) y se habilitan al editar (obj is not None).
+    """
 
+    def setUp(self):
+        from django.test import RequestFactory
+        from codiselu.models import User
+        self.rf = RequestFactory()
+        self.super_user = User.objects.create_superuser(
+            username='admin_trad_dynamic_test',
+            email='admin_trad_dynamic@example.com',
+            password='Password123!'
+        )
 
+    def _get_admin_request(self, path):
+        req = self.rf.get(path)
+        req.user = self.super_user
+        return req
 
+    def test_fieldsets_al_crear_ocultan_traducciones(self):
+        from django.contrib.admin.sites import site
+        from codiselu.models import (
+            Ciudad, CircuitoCreativo, PuntoInteres, DatoHistorico,
+            Empresa, OportunidadInversion, Evento
+        )
+        from codiselu.admin import (
+            CiudadAdmin, CircuitoCreativoAdmin, PuntoInteresAdmin,
+            DatoHistoricoAdmin, EmpresaAdmin, OportunidadInversionAdmin, EventoAdmin
+        )
 
+        admin_classes = [
+            (CiudadAdmin, Ciudad, '/admin/codiselu/ciudad/add/'),
+            (CircuitoCreativoAdmin, CircuitoCreativo, '/admin/codiselu/circuitocreativo/add/'),
+            (PuntoInteresAdmin, PuntoInteres, '/admin/codiselu/puntointeres/add/'),
+            (DatoHistoricoAdmin, DatoHistorico, '/admin/codiselu/datohistorico/add/'),
+            (EmpresaAdmin, Empresa, '/admin/codiselu/empresa/add/'),
+            (OportunidadInversionAdmin, OportunidadInversion, '/admin/codiselu/oportunidadinversion/add/'),
+            (EventoAdmin, Evento, '/admin/codiselu/evento/add/'),
+        ]
 
+        for admin_cls, model_cls, path in admin_classes:
+            with self.subTest(admin=admin_cls.__name__):
+                admin_inst = admin_cls(model_cls, site)
+                req = self._get_admin_request(path)
+                fieldsets_add = admin_inst.get_fieldsets(req, obj=None)
+                nombres_fieldsets = [fs[0] for fs in fieldsets_add]
 
+                # Debe estar el fieldset de Español
+                self.assertTrue(any('Español' in nombre for nombre in nombres_fieldsets))
+                # NO deben estar los fieldsets de inglés ni mandarín
+                self.assertFalse(any('Inglés' in nombre or 'Mandarín' in nombre for nombre in nombres_fieldsets))
 
+    def test_fieldsets_al_editar_muestran_traducciones(self):
+        from django.contrib.admin.sites import site
+        from codiselu.models import (
+            Ciudad, CircuitoCreativo, PuntoInteres, DatoHistorico,
+            Empresa, OportunidadInversion, Evento
+        )
+        from codiselu.admin import (
+            CiudadAdmin, CircuitoCreativoAdmin, PuntoInteresAdmin,
+            DatoHistoricoAdmin, EmpresaAdmin, OportunidadInversionAdmin, EventoAdmin
+        )
+
+        admin_classes = [
+            (CiudadAdmin, Ciudad, Ciudad(), '/admin/codiselu/ciudad/1/change/'),
+            (CircuitoCreativoAdmin, CircuitoCreativo, CircuitoCreativo(), '/admin/codiselu/circuitocreativo/1/change/'),
+            (PuntoInteresAdmin, PuntoInteres, PuntoInteres(), '/admin/codiselu/puntointeres/1/change/'),
+            (DatoHistoricoAdmin, DatoHistorico, DatoHistorico(), '/admin/codiselu/datohistorico/1/change/'),
+            (EmpresaAdmin, Empresa, Empresa(), '/admin/codiselu/empresa/1/change/'),
+            (OportunidadInversionAdmin, OportunidadInversion, OportunidadInversion(), '/admin/codiselu/oportunidadinversion/1/change/'),
+            (EventoAdmin, Evento, Evento(), '/admin/codiselu/evento/1/change/'),
+        ]
+
+        for admin_cls, model_cls, dummy_obj, path in admin_classes:
+            with self.subTest(admin=admin_cls.__name__):
+                admin_inst = admin_cls(model_cls, site)
+                req = self._get_admin_request(path)
+                fieldsets_change = admin_inst.get_fieldsets(req, obj=dummy_obj)
+                nombres_fieldsets = [fs[0] for fs in fieldsets_change]
+
+                # Deben estar todas las traducciones
+                self.assertTrue(any('Inglés' in nombre for nombre in nombres_fieldsets))
+                self.assertTrue(any('Mandarín' in nombre for nombre in nombres_fieldsets))
+
+    def test_inlines_ocultan_traducciones_al_crear_padre(self):
+        from django.contrib.admin.sites import site
+        from codiselu.models import PuntoInteres, Empresa
+        from codiselu.admin import DatoHistoricoInline, OportunidadInversionInline
+
+        req_add = self._get_admin_request('/admin/codiselu/puntointeres/add/')
+
+        # DatoHistoricoInline
+        inline_dh = DatoHistoricoInline(PuntoInteres, site)
+        fields_dh_add = inline_dh.get_fields(req_add, obj=None)
+        self.assertNotIn('titulo_en', fields_dh_add)
+        self.assertNotIn('titulo_zh', fields_dh_add)
+        self.assertIn('titulo', fields_dh_add)
+
+        # OportunidadInversionInline
+        inline_oi = OportunidadInversionInline(Empresa, site)
+        fields_oi_add = inline_oi.get_fields(req_add, obj=None)
+        self.assertNotIn('titulo_en', fields_oi_add)
+        self.assertNotIn('titulo_zh', fields_oi_add)
+        self.assertIn('titulo', fields_oi_add)
+
+    def test_inlines_muestran_traducciones_al_editar_padre(self):
+        from django.contrib.admin.sites import site
+        from codiselu.models import PuntoInteres, Empresa
+        from codiselu.admin import DatoHistoricoInline, OportunidadInversionInline
+
+        req_change = self._get_admin_request('/admin/codiselu/puntointeres/1/change/')
+        punto = PuntoInteres()
+        empresa = Empresa()
+
+        # DatoHistoricoInline
+        inline_dh = DatoHistoricoInline(PuntoInteres, site)
+        fields_dh_change = inline_dh.get_fields(req_change, obj=punto)
+        self.assertIn('titulo_en', fields_dh_change)
+        self.assertIn('titulo_zh', fields_dh_change)
+
+        # OportunidadInversionInline
+        inline_oi = OportunidadInversionInline(Empresa, site)
+        fields_oi_change = inline_oi.get_fields(req_change, obj=empresa)
+        self.assertIn('titulo_en', fields_oi_change)
+        self.assertIn('titulo_zh', fields_oi_change)
+
+    def test_guardar_punto_autotraduce_y_permite_edicion_posterior(self):
+        from unittest.mock import patch
+        from codiselu.models import Ciudad, CircuitoCreativo, PuntoInteres
+
+        ciudad = Ciudad.objects.create(
+            nombre='León', descripcion='Ciudad universitaria',
+            latitud_centro=12.43, longitud_centro=-86.87
+        )
+        circuito = CircuitoCreativo.objects.create(
+            ciudad=ciudad, nombre='Ruta Iglesias', descripcion='Recorrido',
+            distancia_km=3.5, duracion_estimada='2h'
+        )
+
+        with patch('codiselu.translation_service.traducir_texto') as mock_trad:
+            mock_trad.side_effect = lambda txt, target='en', source='es': f"{txt} ({target})"
+
+            # 1. Al crear con solo español
+            punto = PuntoInteres(
+                circuito=circuito, nombre='Catedral de León',
+                descripcion='Hermosa catedral', latitud=12.43, longitud=-86.87
+            )
+            punto.save()
+
+            # Las traducciones se autocompletaron
+            self.assertEqual(punto.nombre_en, 'Catedral de León (en)')
+            self.assertEqual(punto.nombre_zh, 'Catedral de León (zh-CN)')
+
+            # 2. Al editar manualmente la traducción
+            punto.nombre_en = 'Cathedral of Leon (Custom Edited)'
+            punto.save()
+
+            # La edición manual se preserva
+            punto.refresh_from_db()
+            self.assertEqual(punto.nombre_en, 'Cathedral of Leon (Custom Edited)')

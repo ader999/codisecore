@@ -19,7 +19,7 @@ Para evaluar este requerimiento en la plataforma o formulario del hackathon, pre
 | **Plataforma de Despliegue** | **Railway** (Infraestructura de Contenedores + PostgreSQL Administrado) |
 | **URL Base de la API** | `https://codicelu.codeader.com/api/` (o dominio `.up.railway.app` activo) |
 | **URL de la Landing Page** | `https://codicelu.codeader.com/` o `https://codicelu.codeader.com/landing/` |
-| **Panel de Administración** | `https://codicelu.codeader.com/admin/` |
+| **Panel de Control Codice路** | `https://codicelu.codeader.com/admin/` |
 | **Endpoint de Health Check** | `https://codicelu.codeader.com/api/health/` |
 | **Credenciales de Prueba (Demo Jurado)** | **Usuario:** `evaluador@ciudadescreativas.ni` <br>**Contraseña:** `Hackathon2026!Demo` *(o cuenta admin activa en Railway)* |
 | **Arquitectura en la Nube** | Railway Edge (SSL TLS 1.3) + Docker Multi-Stage (Gunicorn 4 workers) + PostgreSQL + WhiteNoise / S3 |
@@ -329,7 +329,7 @@ docker compose logs -f --tail=100 nginx
 
 El desarrollo y puesta en marcha de Codice路 satisface con rigor técnico cada uno de los aspectos demandados por el requerimiento de ejecución y preparación para producción del hackathon.
 
-En primer lugar, la solución se encuentra efectivamente desplegada y disponible en la nube de forma ininterrumpida a través de la infraestructura de Railway Cloud PaaS, contando con dominio seguro HTTPS y endpoints públicos de fácil acceso tanto para la API REST como para el portal web y el panel de control administrativo.
+En primer lugar, la solución se encuentra efectivamente desplegada y disponible en la nube de forma ininterrumpida a través de la infraestructura de Railway Cloud PaaS, contando con dominio seguro HTTPS y endpoints públicos de fácil acceso tanto para la API REST como para el portal web y el panel de control Codice路.
 
 En segundo lugar, el sistema está rigurosamente preparado para soportar cargas de producción, sustituyendo el servidor básico de desarrollo por el servidor WSGI industrial Gunicorn con cuatro procesos concurrentes y tiempos de espera diseñados para conexiones lentas, complementado con WhiteNoise para la compresión de estáticos y un proxy perimetral blindado para transferencias de hasta cincuenta megabytes.
 
