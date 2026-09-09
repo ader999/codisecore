@@ -580,7 +580,9 @@ Permite tanto a usuarios **protagonistas** como a **administradores** publicar f
   "es_gratuito": true,
   "es_oficial": true,
   "dias_previos_mural": 10,
-  "cupo_maximo": 500
+  "cupo_maximo": 500,
+  "solo_este_ano": false,
+  "rango_celebracion": "Tercera semana de septiembre (San Jerónimo)"
 }
 ```
 * **Respuesta Exitosa (201 Created / 200 OK):**
@@ -595,6 +597,8 @@ Permite tanto a usuarios **protagonistas** como a **administradores** publicar f
   "ciudad_nombre": "Masaya",
   "titulo": "Feria Regional del Café y Artesanías",
   "descripcion": "Celebración oficial de la ciudad con degustación y talleres...",
+  "solo_este_ano": false,
+  "rango_celebracion": "Tercera semana de septiembre (San Jerónimo)",
   "fecha_inicio": "2026-09-15T10:00:00Z",
   "fecha_fin": "2026-09-15T18:00:00Z",
   "ubicacion": "Parque Central de Masaya",

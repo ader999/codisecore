@@ -1320,3 +1320,47 @@ class AdminTraduccionesDinamicasTests(APITestCase):
             # La edición manual se preserva
             punto.refresh_from_db()
             self.assertEqual(punto.nombre_en, 'Cathedral of Leon (Custom Edited)')
+
+    def test_evento_creador_admin_y_campos_anuales_y_rango(self):
+        from unittest.mock import patch
+        from django.contrib.admin.sites import site
+        from codiselu.models import Evento, Ciudad
+        from codiselu.admin import EventoAdmin
+
+        ciudad = Ciudad.objects.create(
+            nombre='Granada Fest', descripcion='Ciudad Colonial',
+            latitud_centro=11.93, longitud_centro=-85.95
+        )
+
+        with patch('codiselu.translation_service.traducir_texto') as mock_trad:
+            mock_trad.side_effect = lambda txt, target='en', source='es': f"{txt} ({target})"
+
+            # 1. Verificar que Evento autotraduce rango_celebracion
+            evento = Evento.objects.create(
+                creador=self.super_user,
+                ciudad=ciudad,
+                titulo='Semana Santa en Granada',
+                descripcion='Procesiones tradicionales en calles coloniales',
+                solo_este_ano=False,
+                rango_celebracion='Semana Santa / Marzo o Abril',
+                fecha_inicio='2026-04-03T08:00:00Z',
+                ubicacion='Catedral de Granada'
+            )
+            self.assertEqual(evento.rango_celebracion_en, 'Semana Santa / Marzo o Abril (en)')
+            self.assertEqual(evento.rango_celebracion_zh, 'Semana Santa / Marzo o Abril (zh-CN)')
+            self.assertFalse(evento.solo_este_ano)
+
+            # 2. Verificar EventoAdmin get_form
+            admin_inst = EventoAdmin(Evento, site)
+            req = self._get_admin_request('/admin/codiselu/evento/add/')
+            form_cls = admin_inst.get_form(req, obj=None)
+            self.assertTrue(form_cls.base_fields['creador'].disabled)
+            self.assertEqual(form_cls.base_fields['creador'].initial, self.super_user)
+
+            # 3. Verificar serializer y campos en API
+            from codiselu.serializers import EventoSerializer
+            serializer = EventoSerializer(evento)
+            self.assertIn('solo_este_ano', serializer.data)
+            self.assertIn('rango_celebracion', serializer.data)
+            self.assertEqual(serializer.data['rango_celebracion'], 'Semana Santa / Marzo o Abril')
+
