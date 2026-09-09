@@ -302,6 +302,10 @@ class Evento(models.Model):
     descripcion = models.TextField()
     descripcion_en = models.TextField(blank=True, null=True, help_text="Traducción al inglés")
     descripcion_zh = models.TextField(blank=True, null=True, help_text="Traducción al mandarín")
+    solo_este_ano = models.BooleanField(default=False, verbose_name="¿Solo este año?", help_text="Marcar si este evento es exclusivo de este año y no una festividad recurrente anual")
+    rango_celebracion = models.CharField(max_length=255, blank=True, null=True, verbose_name="Rango o fecha de celebración", help_text="Descripción o rango aproximado (ej. 'Semana Santa (marzo/abril)', 'Primer fin de semana de agosto')")
+    rango_celebracion_en = models.CharField(max_length=255, blank=True, null=True, help_text="Traducción al inglés del rango de celebración")
+    rango_celebracion_zh = models.CharField(max_length=255, blank=True, null=True, help_text="Traducción al mandarín del rango de celebración")
     fecha_inicio = models.DateTimeField()
     fecha_fin = models.DateTimeField(null=True, blank=True)
     ubicacion = models.CharField(max_length=255, help_text="Dirección o punto del evento")
@@ -324,17 +328,26 @@ class Evento(models.Model):
 
     def save(self, *args, **kwargs):
         from .translation_service import auto_completar_traducciones
-        auto_completar_traducciones(self, ['titulo', 'descripcion'])
+        auto_completar_traducciones(self, ['titulo', 'descripcion', 'rango_celebracion'])
         super().save(*args, **kwargs)
 
     @property
     def en_mural(self):
         from django.utils import timezone
+        from django.utils.dateparse import parse_datetime
         ahora = timezone.now()
-        fecha_visibilidad = self.fecha_inicio - timezone.timedelta(days=self.dias_previos_mural)
-        if self.fecha_fin:
-            return fecha_visibilidad <= ahora <= self.fecha_fin
-        return fecha_visibilidad <= ahora <= (self.fecha_inicio + timezone.timedelta(days=1))
+        f_inicio = self.fecha_inicio
+        if isinstance(f_inicio, str):
+            f_inicio = parse_datetime(f_inicio)
+        if not f_inicio:
+            return False
+        fecha_visibilidad = f_inicio - timezone.timedelta(days=self.dias_previos_mural)
+        f_fin = self.fecha_fin
+        if isinstance(f_fin, str):
+            f_fin = parse_datetime(f_fin)
+        if f_fin:
+            return fecha_visibilidad <= ahora <= f_fin
+        return fecha_visibilidad <= ahora <= (f_inicio + timezone.timedelta(days=1))
 
     @property
     def total_granos_cafe(self):

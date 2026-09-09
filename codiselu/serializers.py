@@ -305,7 +305,7 @@ class TraduccionSerializerMixin:
       por su versión traducida si existe, o mantiene el español como fallback.
     - Además, incluye un diccionario 'traducciones' con todas las versiones disponibles.
     """
-    CAMPOS_TRADUCIBLES = ['nombre', 'descripcion', 'titulo', 'contenido']
+    CAMPOS_TRADUCIBLES = ['nombre', 'descripcion', 'titulo', 'contenido', 'rango_celebracion']
 
     def obtener_idioma_cliente(self):
         request = self.context.get('request')
@@ -655,8 +655,9 @@ class EventoSerializer(TraduccionSerializerMixin, serializers.ModelSerializer):
         model = Evento
         fields = [
             'id', 'creador', 'creador_username', 'empresa', 'empresa_nombre',
-            'ciudad', 'ciudad_nombre', 'titulo', 'descripcion', 'fecha_inicio',
-            'fecha_fin', 'ubicacion', 'latitud', 'longitud', 'imagen',
+            'ciudad', 'ciudad_nombre', 'titulo', 'descripcion',
+            'solo_este_ano', 'rango_celebracion', 'rango_celebracion_en', 'rango_celebracion_zh',
+            'fecha_inicio', 'fecha_fin', 'ubicacion', 'latitud', 'longitud', 'imagen',
             'precio_entrada', 'es_gratuito', 'cupo_maximo', 'es_oficial',
             'dias_previos_mural', 'en_mural', 'esta_activo', 'total_granos_cafe',
             'user_ha_dado_grano_cafe', 'total_asistentes', 'user_va_a_asistir',

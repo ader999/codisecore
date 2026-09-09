@@ -252,28 +252,43 @@ class EventoAsistenciaInline(admin.TabularInline):
 
 @admin.register(Evento)
 class EventoAdmin(OcultarTraduccionesAlCrearMixin, admin.ModelAdmin):
-    list_display = ('id', 'titulo', 'creador', 'empresa', 'ciudad', 'fecha_inicio', 'total_granos_cafe', 'total_asistentes', 'es_oficial', 'esta_activo')
-    list_filter = ('es_oficial', 'esta_activo', 'es_gratuito', 'ciudad', 'fecha_inicio')
-    search_fields = ('titulo', 'titulo_en', 'titulo_zh', 'descripcion', 'ubicacion', 'creador__username', 'empresa__nombre')
+    list_display = ('id', 'titulo', 'creador', 'empresa', 'ciudad', 'fecha_inicio', 'solo_este_ano', 'total_granos_cafe', 'total_asistentes', 'es_oficial', 'esta_activo')
+    list_filter = ('es_oficial', 'solo_este_ano', 'esta_activo', 'es_gratuito', 'ciudad', 'fecha_inicio')
+    search_fields = ('titulo', 'titulo_en', 'titulo_zh', 'descripcion', 'rango_celebracion', 'ubicacion', 'creador__username', 'empresa__nombre')
     inlines = [GaleriaMultimediaInline, EventoAsistenciaInline]
     fieldsets = (
         ('Información General (Español)', {
             'fields': (
                 'creador', 'empresa', 'ciudad', 'titulo', 'descripcion',
+                'solo_este_ano', 'rango_celebracion',
                 'fecha_inicio', 'fecha_fin', 'ubicacion', 'latitud', 'longitud',
                 'imagen', 'precio_entrada', 'es_gratuito', 'cupo_maximo',
                 'es_oficial', 'dias_previos_mural', 'esta_activo'
             )
         }),
         ('Traducción al Inglés (Auto / Editable)', {
-            'fields': ('titulo_en', 'descripcion_en'),
+            'fields': ('titulo_en', 'descripcion_en', 'rango_celebracion_en'),
             'classes': ('collapse',)
         }),
         ('Traducción al Mandarín (Auto / Editable)', {
-            'fields': ('titulo_zh', 'descripcion_zh'),
+            'fields': ('titulo_zh', 'descripcion_zh', 'rango_celebracion_zh'),
             'classes': ('collapse',)
         }),
     )
+
+    def get_form(self, request, obj=None, **kwargs):
+        form = super().get_form(request, obj, **kwargs)
+        if 'creador' in form.base_fields:
+            if obj is None and getattr(request, 'user', None) and request.user.is_authenticated:
+                form.base_fields['creador'].initial = request.user
+            form.base_fields['creador'].disabled = True
+        return form
+
+    def save_model(self, request, obj, form, change):
+        if not change or not obj.creador_id:
+            if getattr(request, 'user', None) and request.user.is_authenticated:
+                obj.creador = request.user
+        super().save_model(request, obj, form, change)
 
 
 @admin.register(EventoAsistencia)
