@@ -115,3 +115,41 @@ class MiskitoTranslationTests(TestCase):
 
         self.assertEqual(data['nombre'], "Granada")
         self.assertEqual(data['descripcion'], "Gran Sultana")
+
+    def test_solo_pendientes_omite_elementos_ya_traducidos(self):
+        """Verifica que al traducir completamente un punto o circuito, se excluyan del PDF."""
+        # Completar traducción de la descripción del circuito y punto
+        self.circuito.descripcion_miq = "Traducido circuito"
+        self.circuito.save()
+        self.punto.descripcion_miq = "Traducido punto"
+        self.punto.save()
+
+        # Ahora todos los campos de ciudad_con_circuito están traducidos
+        pdf_buf_pendientes = generar_pdf_traduccion_miskito(solo_pendientes=True)
+        pdf_content = pdf_buf_pendientes.getvalue()
+        self.assertGreater(len(pdf_content), 500)
+        # El PDF indica que no hay pendientes o felicitaciones
+        self.assertTrue(b'%PDF' in pdf_content)
+
+        # Si se solicita la versión completa, se incluyen los elementos traducidos
+        pdf_buf_completo = generar_pdf_traduccion_miskito(solo_pendientes=False)
+        self.assertGreater(len(pdf_buf_completo.getvalue()), len(pdf_content))
+
+    def test_endpoints_aceptan_parametro_solo_pendientes(self):
+        """Verifica que tanto la API como el admin acepten ?solo_pendientes=1 y ?solo_pendientes=0."""
+        client = APIClient()
+        resp_pend = client.get('/api/ciudades/exportar-miskito-pdf/?solo_pendientes=1')
+        self.assertEqual(resp_pend.status_code, 200)
+        self.assertIn('Pendientes', resp_pend['Content-Disposition'])
+
+        resp_comp = client.get('/api/ciudades/exportar-miskito-pdf/?solo_pendientes=0')
+        self.assertEqual(resp_comp.status_code, 200)
+        self.assertIn('Completo', resp_comp['Content-Disposition'])
+
+        # En el admin
+        client_admin = Client()
+        client_admin.force_login(self.admin_user)
+        url_admin = reverse('admin:codiselu_ciudad_exportar_miskito')
+        resp_admin_pend = client_admin.get(f"{url_admin}?solo_pendientes=1")
+        self.assertEqual(resp_admin_pend.status_code, 200)
+        self.assertIn('Pendientes', resp_admin_pend['Content-Disposition'])

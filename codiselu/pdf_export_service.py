@@ -69,7 +69,102 @@ class NumberedCanvas(canvas.Canvas):
         self.restoreState()
 
 
-def generar_pdf_traduccion_miskito(ciudades_ids=None, buffer_destino=None) -> io.BytesIO:
+def tiene_traduccion(valor) -> bool:
+    """Verifica si un campo ya posee traducción al Miskito (no nulo y no en blanco)."""
+    return bool(valor and str(valor).strip())
+
+
+def obtener_estadisticas_traduccion_miskito():
+    """
+    Devuelve un diccionario con el recuento total y pendiente de traducción al Miskito
+    para ciudades con circuitos, circuitos creativos y puntos de interés.
+    """
+    ciudades = Ciudad.objects.filter(circuitos__isnull=False).distinct().prefetch_related(
+        Prefetch('circuitos', queryset=CircuitoCreativo.objects.prefetch_related(
+            Prefetch('puntos_interes', queryset=PuntoInteres.objects.prefetch_related('datos_historicos'))
+        )),
+        'datos_historicos'
+    )
+
+    total_campos = 0
+    campos_pendientes = 0
+    ciudades_pendientes = 0
+    circuitos_pendientes = 0
+    puntos_pendientes = 0
+
+    for c in ciudades:
+        c_tiene_pend = False
+        # Ciudad nombre y descripcion
+        total_campos += 2
+        if not tiene_traduccion(c.nombre_miq):
+            campos_pendientes += 1
+            c_tiene_pend = True
+        if not tiene_traduccion(c.descripcion_miq):
+            campos_pendientes += 1
+            c_tiene_pend = True
+
+        for dh in c.datos_historicos.filter(punto_interes__isnull=True):
+            total_campos += 2
+            if not tiene_traduccion(dh.titulo_miq):
+                campos_pendientes += 1
+                c_tiene_pend = True
+            if not tiene_traduccion(dh.contenido_miq):
+                campos_pendientes += 1
+                c_tiene_pend = True
+
+        for cir in c.circuitos.all():
+            cir_tiene_pend = False
+            total_campos += 2
+            if not tiene_traduccion(cir.nombre_miq):
+                campos_pendientes += 1
+                cir_tiene_pend = True
+            if not tiene_traduccion(cir.descripcion_miq):
+                campos_pendientes += 1
+                cir_tiene_pend = True
+
+            for p in cir.puntos_interes.all():
+                p_tiene_pend = False
+                total_campos += 2
+                if not tiene_traduccion(p.nombre_miq):
+                    campos_pendientes += 1
+                    p_tiene_pend = True
+                if not tiene_traduccion(p.descripcion_miq):
+                    campos_pendientes += 1
+                    p_tiene_pend = True
+
+                for dh_p in p.datos_historicos.all():
+                    total_campos += 2
+                    if not tiene_traduccion(dh_p.titulo_miq):
+                        campos_pendientes += 1
+                        p_tiene_pend = True
+                    if not tiene_traduccion(dh_p.contenido_miq):
+                        campos_pendientes += 1
+                        p_tiene_pend = True
+
+                if p_tiene_pend:
+                    puntos_pendientes += 1
+                    cir_tiene_pend = True
+
+            if cir_tiene_pend:
+                circuitos_pendientes += 1
+                c_tiene_pend = True
+
+        if c_tiene_pend:
+            ciudades_pendientes += 1
+
+    return {
+        'total_ciudades_con_circuitos': ciudades.count(),
+        'ciudades_pendientes': ciudades_pendientes,
+        'circuitos_pendientes': circuitos_pendientes,
+        'puntos_pendientes': puntos_pendientes,
+        'total_campos': total_campos,
+        'campos_pendientes': campos_pendientes,
+        'campos_traducidos': total_campos - campos_pendientes,
+        'porcentaje_completado': round(((total_campos - campos_pendientes) / total_campos * 100), 1) if total_campos > 0 else 100.0
+    }
+
+
+def generar_pdf_traduccion_miskito(ciudades_ids=None, buffer_destino=None, solo_pendientes: bool = True) -> io.BytesIO:
     """
     Genera un documento PDF estructurado y visualmente claro para que traductores
     puedan traducir los contenidos de Ciudades, Circuitos Creativos y Puntos de Interés
@@ -77,6 +172,11 @@ def generar_pdf_traduccion_miskito(ciudades_ids=None, buffer_destino=None) -> io
 
     Reglas de negocio aplicadas:
     - Excluye ciudades que no tengan circuitos creativos.
+    - Si solo_pendientes=True (por defecto):
+      * Omite campos que ya posean traducción al Miskito.
+      * Omite puntos de interés que ya estén completamente traducidos.
+      * Omite circuitos creativos que ya estén completamente traducidos.
+      * Omite ciudades que ya estén completamente traducidas.
     - Proporciona contexto cultural, explicación de cada elemento y su función.
     - Incluye identificadores de referencia [REF] para facilitar la carga posterior al sistema.
     """
@@ -103,6 +203,111 @@ def generar_pdf_traduccion_miskito(ciudades_ids=None, buffer_destino=None) -> io
 
     ciudades = list(queryset)
 
+    # Procesar y filtrar según solo_pendientes
+    ciudades_procesadas = []
+    conteo_campos_pendientes = 0
+    conteo_campos_omitidos = 0
+
+    for ciudad in ciudades:
+        c_nombre_pend = not tiene_traduccion(ciudad.nombre_miq)
+        c_desc_pend = not tiene_traduccion(ciudad.descripcion_miq)
+
+        if c_nombre_pend:
+            conteo_campos_pendientes += 1
+        else:
+            conteo_campos_omitidos += 1
+
+        if c_desc_pend:
+            conteo_campos_pendientes += 1
+        else:
+            conteo_campos_omitidos += 1
+
+        dh_ciudad_items = []
+        for dh in ciudad.datos_historicos.filter(punto_interes__isnull=True):
+            dh_tit_pend = not tiene_traduccion(dh.titulo_miq)
+            dh_cont_pend = not tiene_traduccion(dh.contenido_miq)
+
+            if dh_tit_pend: conteo_campos_pendientes += 1
+            else: conteo_campos_omitidos += 1
+
+            if dh_cont_pend: conteo_campos_pendientes += 1
+            else: conteo_campos_omitidos += 1
+
+            if not solo_pendientes or (dh_tit_pend or dh_cont_pend):
+                dh_ciudad_items.append({
+                    'objeto': dh,
+                    'titulo_pendiente': dh_tit_pend,
+                    'contenido_pendiente': dh_cont_pend
+                })
+
+        circuitos_items = []
+        for cir in ciudad.circuitos.all():
+            cir_nom_pend = not tiene_traduccion(cir.nombre_miq)
+            cir_desc_pend = not tiene_traduccion(cir.descripcion_miq)
+
+            if cir_nom_pend: conteo_campos_pendientes += 1
+            else: conteo_campos_omitidos += 1
+
+            if cir_desc_pend: conteo_campos_pendientes += 1
+            else: conteo_campos_omitidos += 1
+
+            puntos_items = []
+            for p in cir.puntos_interes.all():
+                p_nom_pend = not tiene_traduccion(p.nombre_miq)
+                p_desc_pend = not tiene_traduccion(p.descripcion_miq)
+
+                if p_nom_pend: conteo_campos_pendientes += 1
+                else: conteo_campos_omitidos += 1
+
+                if p_desc_pend: conteo_campos_pendientes += 1
+                else: conteo_campos_omitidos += 1
+
+                dh_punto_items = []
+                for dh_p in p.datos_historicos.all():
+                    dh_p_tit_pend = not tiene_traduccion(dh_p.titulo_miq)
+                    dh_p_cont_pend = not tiene_traduccion(dh_p.contenido_miq)
+
+                    if dh_p_tit_pend: conteo_campos_pendientes += 1
+                    else: conteo_campos_omitidos += 1
+
+                    if dh_p_cont_pend: conteo_campos_pendientes += 1
+                    else: conteo_campos_omitidos += 1
+
+                    if not solo_pendientes or (dh_p_tit_pend or dh_p_cont_pend):
+                        dh_punto_items.append({
+                            'objeto': dh_p,
+                            'titulo_pendiente': dh_p_tit_pend,
+                            'contenido_pendiente': dh_p_cont_pend
+                        })
+
+                p_tiene_pendientes = p_nom_pend or p_desc_pend or len(dh_punto_items) > 0
+                if not solo_pendientes or p_tiene_pendientes:
+                    puntos_items.append({
+                        'objeto': p,
+                        'nombre_pendiente': p_nom_pend,
+                        'descripcion_pendiente': p_desc_pend,
+                        'datos_historicos': dh_punto_items
+                    })
+
+            cir_tiene_pendientes = cir_nom_pend or cir_desc_pend or len(puntos_items) > 0
+            if not solo_pendientes or cir_tiene_pendientes:
+                circuitos_items.append({
+                    'objeto': cir,
+                    'nombre_pendiente': cir_nom_pend,
+                    'descripcion_pendiente': cir_desc_pend,
+                    'puntos': puntos_items
+                })
+
+        c_tiene_pendientes = c_nombre_pend or c_desc_pend or len(dh_ciudad_items) > 0 or len(circuitos_items) > 0
+        if not solo_pendientes or c_tiene_pendientes:
+            ciudades_procesadas.append({
+                'objeto': ciudad,
+                'nombre_pendiente': c_nombre_pend,
+                'descripcion_pendiente': c_desc_pend,
+                'datos_historicos': dh_ciudad_items,
+                'circuitos': circuitos_items
+            })
+
     # Configuración de página
     # Ancho imprimible: 8.5 * 72 - 72 = 540 puntos (márgenes de 0.5 pulgada / 36 pt)
     doc = SimpleDocTemplate(
@@ -122,44 +327,36 @@ def generar_pdf_traduccion_miskito(ciudades_ids=None, buffer_destino=None) -> io
     neutral_dark = colors.HexColor("#1F2937")      # Gris oscuro para lectura
     neutral_light = colors.HexColor("#F3F4F6")     # Fondo suave
     border_color = colors.HexColor("#D1D5DB")
+    accent_green = colors.HexColor("#065F46")
 
     title_style = ParagraphStyle(
         'DocTitle',
         parent=styles['Heading1'],
         fontName='Helvetica-Bold',
-        fontSize=18,
-        leading=22,
+        fontSize=17,
+        leading=21,
         textColor=primary_color,
-        spaceAfter=4
+        spaceAfter=3
     )
 
     subtitle_style = ParagraphStyle(
         'DocSubtitle',
         parent=styles['Normal'],
         fontName='Helvetica',
-        fontSize=10,
-        leading=13,
+        fontSize=9.5,
+        leading=12.5,
         textColor=colors.HexColor("#4B5563"),
-        spaceAfter=10
+        spaceAfter=8
     )
 
     section_header_style = ParagraphStyle(
         'SectionHeader',
         parent=styles['Heading2'],
         fontName='Helvetica-Bold',
-        fontSize=12,
-        leading=15,
+        fontSize=11.5,
+        leading=14.5,
         textColor=primary_color,
         spaceAfter=4
-    )
-
-    context_title_style = ParagraphStyle(
-        'ContextTitle',
-        parent=styles['Normal'],
-        fontName='Helvetica-Bold',
-        fontSize=9,
-        leading=12,
-        textColor=primary_color
     )
 
     context_body_style = ParagraphStyle(
@@ -189,15 +386,6 @@ def generar_pdf_traduccion_miskito(ciudades_ids=None, buffer_destino=None) -> io
         textColor=primary_color
     )
 
-    col_ref_style = ParagraphStyle(
-        'ColRef',
-        parent=styles['Normal'],
-        fontName='Helvetica',
-        fontSize=7,
-        leading=9,
-        textColor=colors.HexColor("#6B7280")
-    )
-
     col_spanish_style = ParagraphStyle(
         'ColSpanish',
         parent=styles['Normal'],
@@ -213,7 +401,7 @@ def generar_pdf_traduccion_miskito(ciudades_ids=None, buffer_destino=None) -> io
         fontName='Helvetica-Oblique',
         fontSize=8.5,
         leading=11.5,
-        textColor=colors.HexColor("#065F46")
+        textColor=accent_green
     )
 
     col_write_prompt_style = ParagraphStyle(
@@ -225,26 +413,39 @@ def generar_pdf_traduccion_miskito(ciudades_ids=None, buffer_destino=None) -> io
         textColor=colors.HexColor("#9CA3AF")
     )
 
+    badge_pending_style = ParagraphStyle(
+        'BadgePending',
+        parent=styles['Normal'],
+        fontName='Helvetica-Bold',
+        fontSize=7,
+        leading=9,
+        textColor=colors.HexColor("#DC2626")
+    )
+
     story = []
 
     # =========================================================================
     # PORTADA / ENCABEZADO Y GUÍA DE CONTEXTO PARA EL TRADUCTOR
     # =========================================================================
 
-    # Fila de logotipo y título
     logo_path = os.path.join(settings.BASE_DIR, 'logocodicelu.png')
-    header_data = []
+    subtitulo_modo = (
+        "<font color='#B45309'><b>[ MODO FILTRO: Únicamente contenidos pendientes de traducción ]</b></font><br/>"
+        "<i>Los elementos que ya cuentan con traducción al Miskito han sido omitidos automáticamente de este documento.</i>"
+        if solo_pendientes else
+        "<font color='#1E40AF'><b>[ MODO COMPLETO: Incluye todos los elementos ]</b></font>"
+    )
+
     if os.path.exists(logo_path):
         img = Image(logo_path, width=2.0 * inch, height=0.9 * inch)
         header_table = Table(
             [[img, Paragraph("<b>Codice路 • Red Nacional de Ciudades Creativas</b><br/>"
-                             "<font size=14 color='#1E3A8A'><b>GUÍA DE TRADUCCIÓN AL IDIOMA MISKITO</b></font><br/>"
-                             "<font size=9 color='#6B7280'>Documento oficial de trabajo para traducción cultural (Miskitu bil)</font>", title_style)]],
+                             "<font size=13 color='#1E3A8A'><b>GUÍA DE TRADUCCIÓN AL IDIOMA MISKITO</b></font><br/>"
+                             f"<font size=8.5 color='#4B5563'>{subtitulo_modo}</font>", title_style)]],
             colWidths=[2.2 * inch, 5.3 * inch]
         )
         header_table.setStyle(TableStyle([
             ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-            ('ALIGN', (0, 0), (0, 0), 'LEFT'),
             ('LEFTPADDING', (0, 0), (-1, -1), 0),
             ('RIGHTPADDING', (0, 0), (-1, -1), 0),
             ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
@@ -252,22 +453,28 @@ def generar_pdf_traduccion_miskito(ciudades_ids=None, buffer_destino=None) -> io
         story.append(header_table)
     else:
         story.append(Paragraph("<b>Codice路 • GUÍA DE TRADUCCIÓN AL IDIOMA MISKITO</b>", title_style))
-        story.append(Paragraph("Documentación oficial para traducción cultural al Miskitu", subtitle_style))
+        story.append(Paragraph(subtitulo_modo, subtitle_style))
 
     story.append(Spacer(1, 6))
     story.append(HRFlowable(width="100%", thickness=1.5, color=primary_color, spaceAfter=8, spaceBefore=0))
 
-    # Resumen y métricas
-    total_circuitos = sum(c.circuitos.count() for c in ciudades)
-    total_puntos = sum(sum(cir.puntos_interes.count() for cir in c.circuitos.all()) for c in ciudades)
+    # Resumen y métricas de pendientes
+    total_cir_pend = sum(len(c['circuitos']) for c in ciudades_procesadas)
+    total_pts_pend = sum(sum(len(cir['puntos']) for cir in c['circuitos']) for c in ciudades_procesadas)
     fecha_hoy = datetime.now().strftime("%d de %B de %Y")
 
     resumen_data = [
         [
-            Paragraph(f"<b>Fecha de Emisión:</b> {fecha_hoy}", context_body_style),
-            Paragraph(f"<b>Ciudades con Circuitos:</b> {len(ciudades)}", context_body_style),
-            Paragraph(f"<b>Circuitos Creativos:</b> {total_circuitos}", context_body_style),
-            Paragraph(f"<b>Puntos de Interés:</b> {total_puntos}", context_body_style),
+            Paragraph(f"<b>Fecha:</b> {fecha_hoy}", context_body_style),
+            Paragraph(f"<b>Ciudades con pendientes:</b> {len(ciudades_procesadas)}", context_body_style),
+            Paragraph(f"<b>Circuitos con pendientes:</b> {total_cir_pend}", context_body_style),
+            Paragraph(f"<b>Puntos con pendientes:</b> {total_pts_pend}", context_body_style),
+        ],
+        [
+            Paragraph(f"<b>Filtro activo:</b> {'Solo pendientes' if solo_pendientes else 'Todos'}", context_body_style),
+            Paragraph(f"<b>Campos por traducir:</b> <font color='#DC2626'><b>{conteo_campos_pendientes}</b></font>", context_body_style),
+            Paragraph(f"<b>Campos ya traducidos (omitidos):</b> <font color='#059669'><b>{conteo_campos_omitidos}</b></font>", context_body_style),
+            Paragraph("<b>Idioma:</b> Miskito (Miskitu bil)", context_body_style),
         ]
     ]
     t_resumen = Table(resumen_data, colWidths=[135, 135, 135, 135])
@@ -294,24 +501,21 @@ def generar_pdf_traduccion_miskito(ciudades_ids=None, buffer_destino=None) -> io
         "puedan disfrutar plenamente de la información turística en su propia lengua originaria.<br/><br/>"
         "<b>ESTRUCTURA Y SIGNIFICADO DE CADA ELEMENTO:</b><br/>"
         "• <b>Ciudad (Municipio):</b> Es el territorio principal. Su descripción presenta la identidad global, su historia "
-        "y vocación cultural (ciudades creativas). <i>Nota: Se han excluido del documento las ciudades que aún no cuentan con circuitos creativos.</i><br/>"
-        "• <b>Circuito Creativo (Ruta Temática):</b> Es un recorrido turístico planificado (a pie o en transporte) que agrupa "
-        "atractivos culturales, murales, gastronomía o tradiciones representativas dentro de la ciudad.<br/>"
-        "• <b>Punto de Interés (Parada o Hito):</b> Cada una de las estaciones que componen el circuito (un taller artesanal, "
-        "un monumento colonial, un museo, un mirador natural o un restaurante típico). Se indica el orden y la categoría.<br/>"
-        "• <b>Dato Histórico / Tradición:</b> Relatos, anécdotas, mitos, leyendas o saberes populares asociados a cada sitio.<br/><br/>"
+        "y vocación cultural (ciudades creativas). <i>Se han excluido del documento las ciudades que no cuentan con circuitos creativos.</i><br/>"
+        "• <b>Circuito Creativo (Ruta Temática):</b> Recorrido turístico planificado (a pie o vehicular) que agrupa "
+        "atractivos culturales, murales, gastronomía o tradiciones dentro de la ciudad.<br/>"
+        "• <b>Punto de Interés (Parada o Hito):</b> Cada una de las estaciones que componen el circuito (taller artesanal, "
+        "monumento, museo, mirador o gastronomía típica). Se indica el orden y la categoría.<br/>"
+        "• <b>Dato Histórico / Tradición:</b> Relatos, mitos, leyendas o saberes populares asociados a cada sitio.<br/><br/>"
         "<b>GUÍA PARA EL TRADUCTOR:</b><br/>"
-        "1. Traduzca el texto en español respetando el sentido cultural y turístico. Si un nombre propio (ej. 'Monimbó', 'Sutiaba') "
-        "no tiene traducción directa, manténgalo o adáptelo según la fonética del Miskito.<br/>"
-        "2. Utilice el espacio <b>'Traducción al Miskito / Miskitu bil'</b> para redactar su propuesta.<br/>"
-        "3. Cada elemento incluye un código <b>[REF: ...]</b> único. Este código es indispensable para que el equipo "
-        "de desarrollo pueda incorporar la traducción directamente en la base de datos sin errores de asignación."
+        "1. <b>Filtro de Contenidos:</b> Este documento solo muestra los textos que <b>aún no han sido traducidos</b> al Miskito.<br/>"
+        "2. Traduzca el texto en español respetando el sentido cultural. Los nombres propios (ej. 'Sutiaba', 'Monimbó') "
+        "se pueden conservar o adaptar según la fonética del Miskito.<br/>"
+        "3. Escriba en el espacio <b>'Traducción al Miskito / Miskitu bil'</b>.<br/>"
+        "4. Cada elemento incluye un código único <b>[REF: ...]</b> indispensable para registrar la traducción en la base de datos sin equivocación."
     )
 
-    t_contexto = Table(
-        [[Paragraph(contexto_html, context_body_style)]],
-        colWidths=[540]
-    )
+    t_contexto = Table([[Paragraph(contexto_html, context_body_style)]], colWidths=[540])
     t_contexto.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor("#EFF6FF")),
         ('BOX', (0, 0), (-1, -1), 1.2, colors.HexColor("#3B82F6")),
@@ -323,27 +527,52 @@ def generar_pdf_traduccion_miskito(ciudades_ids=None, buffer_destino=None) -> io
     story.append(t_contexto)
     story.append(Spacer(1, 10))
 
-    # Índice de Ciudades Incluidas
-    story.append(Paragraph("<b>Índice de Ciudades Seleccionadas con Circuitos Creativos:</b>", section_header_style))
+    # CASO ESPECIAL: Todo el contenido ya está traducido
+    if len(ciudades_procesadas) == 0:
+        completado_html = (
+            "<font size=16 color='#047857'><b>🎉 ¡FELICIDADES! TRADUCCIÓN AL MISKITO COMPLETADA</b></font><br/><br/>"
+            "<font size=11 color='#1F2937'>No se encontraron textos pendientes de traducción en las ciudades con circuitos creativos.<br/>"
+            "Todos los nombres, descripciones y puntos de interés ya cuentan con su equivalente en idioma Miskito (Miskitu bil).<br/><br/>"
+            "Si deseas descargar la guía completa con todos los contenidos traducidos como respaldo o revisión, "
+            "selecciona la opción <b>'Descargar Completo'</b> en el panel de control.</font>"
+        )
+        t_completado = Table([[Paragraph(completado_html, context_body_style)]], colWidths=[540])
+        t_completado.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor("#ECFDF5")),
+            ('BOX', (0, 0), (-1, -1), 1.5, colors.HexColor("#10B981")),
+            ('TOPPADDING', (0, 0), (-1, -1), 18),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 18),
+            ('LEFTPADDING', (0, 0), (-1, -1), 16),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 16),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ]))
+        story.append(t_completado)
+        doc.build(story, canvasmaker=NumberedCanvas)
+        buffer_destino.seek(0)
+        return buffer_destino
+
+    # Índice de Ciudades con elementos pendientes
+    story.append(Paragraph("<b>Índice de Ciudades con Contenidos Pendientes de Traducción:</b>", section_header_style))
     tabla_indice_data = [
         [
             Paragraph("<b>Ciudad</b>", table_header_style),
-            Paragraph("<b>Circuitos</b>", table_header_style),
-            Paragraph("<b>Puntos Totales</b>", table_header_style),
-            Paragraph("<b>Circuitos Incluidos</b>", table_header_style)
+            Paragraph("<b>Circuitos Pendientes</b>", table_header_style),
+            Paragraph("<b>Puntos Pendientes</b>", table_header_style),
+            Paragraph("<b>Detalle de Circuitos</b>", table_header_style)
         ]
     ]
-    for c in ciudades:
-        circuitos_nombres = ", ".join([cir.nombre for cir in c.circuitos.all()])
-        puntos_ciudad = sum(cir.puntos_interes.count() for cir in c.circuitos.all())
+    for c_info in ciudades_procesadas:
+        c = c_info['objeto']
+        cirs_nombres = ", ".join([cir['objeto'].nombre for cir in c_info['circuitos']]) or "Solo datos generales de la ciudad"
+        pts_count = sum(len(cir['puntos']) for cir in c_info['circuitos'])
         tabla_indice_data.append([
             Paragraph(f"<b>{c.nombre}</b>", col_meta_style),
-            Paragraph(f"{c.circuitos.count()} circuitos", col_spanish_style),
-            Paragraph(f"{puntos_ciudad} paradas", col_spanish_style),
-            Paragraph(f"<font size=7 color='#4B5563'>{circuitos_nombres}</font>", col_spanish_style),
+            Paragraph(f"{len(c_info['circuitos'])} circuito(s)", col_spanish_style),
+            Paragraph(f"{pts_count} parada(s)", col_spanish_style),
+            Paragraph(f"<font size=7 color='#4B5563'>{cirs_nombres}</font>", col_spanish_style),
         ])
 
-    t_indice = Table(tabla_indice_data, colWidths=[100, 75, 75, 290])
+    t_indice = Table(tabla_indice_data, colWidths=[100, 95, 85, 260])
     t_indice.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), primary_color),
         ('BOX', (0, 0), (-1, -1), 1, border_color),
@@ -362,17 +591,19 @@ def generar_pdf_traduccion_miskito(ciudades_ids=None, buffer_destino=None) -> io
     # CUERPO PRINCIPAL: SECCIONES POR CIUDAD, CIRCUITO Y PUNTOS DE INTERÉS
     # =========================================================================
 
-    for idx_c, ciudad in enumerate(ciudades):
+    for idx_c, c_info in enumerate(ciudades_procesadas):
         if idx_c > 0:
             story.append(PageBreak())
+
+        ciudad = c_info['objeto']
 
         # Banner de Ciudad
         banner_ciudad = Table(
             [[
                 Paragraph(f"<font size=13 color='white'><b>🏛️ CIUDAD: {ciudad.nombre.upper()}</b></font>", table_header_style),
-                Paragraph(f"<font size=9 color='#E0E7FF'><b>{ciudad.circuitos.count()} Circuitos Creativos</b> • ID Sistema #{ciudad.id}</font>", ParagraphStyle('R', parent=table_header_style, alignment=2))
+                Paragraph(f"<font size=8.5 color='#E0E7FF'><b>{len(c_info['circuitos'])} Circuitos con pendientes</b> • ID Sistema #{ciudad.id}</font>", ParagraphStyle('R', parent=table_header_style, alignment=2))
             ]],
-            colWidths=[340, 200]
+            colWidths=[330, 210]
         )
         banner_ciudad.setStyle(TableStyle([
             ('BACKGROUND', (0, 0), (-1, -1), primary_color),
@@ -384,33 +615,38 @@ def generar_pdf_traduccion_miskito(ciudades_ids=None, buffer_destino=None) -> io
         story.append(banner_ciudad)
         story.append(Spacer(1, 4))
 
-        # Tabla de Traducción de la Ciudad
+        # Filas de traducción de la Ciudad (solo las que falten si solo_pendientes=True)
         filas_ciudad = [
             [
                 Paragraph("<b>Campo & Referencia</b>", table_header_style),
                 Paragraph("<b>Texto Original en Español</b>", table_header_style),
                 Paragraph("<b>Traducción al Miskito (Miskitu bil)</b>", table_header_style),
-            ],
-            # Nombre de la Ciudad
-            [
-                Paragraph(f"<b>Nombre Ciudad</b><br/>"
-                          f"<font size=7 color='#6B7280'>[REF: CIUDAD:{ciudad.id}:nombre_miq]</font><br/>"
-                          f"<font size=6.5 color='#92400E'>Título principal del municipio</font>", col_meta_style),
-                Paragraph(f"<b>{ciudad.nombre}</b>", col_spanish_style),
-                Paragraph(ciudad.nombre_miq if ciudad.nombre_miq else "<font color='#9CA3AF'>[ Escribir nombre en Miskito ]</font><br/><br/>________________________________________", col_miskito_style if ciudad.nombre_miq else col_write_prompt_style)
-            ],
-            # Descripción de la Ciudad
-            [
-                Paragraph(f"<b>Descripción Cultural</b><br/>"
-                          f"<font size=7 color='#6B7280'>[REF: CIUDAD:{ciudad.id}:descripcion_miq]</font><br/>"
-                          f"<font size=6.5 color='#92400E'>Resumen general de historia y vocación creativa</font>", col_meta_style),
-                Paragraph(ciudad.descripcion or "<i>Sin descripción registrada</i>", col_spanish_style),
-                Paragraph(ciudad.descripcion_miq if ciudad.descripcion_miq else "<font color='#9CA3AF'>[ Escribir traducción al Miskito de la descripción cultural ]</font><br/><br/><br/><br/>________________________________________<br/>________________________________________", col_miskito_style if ciudad.descripcion_miq else col_write_prompt_style)
             ]
         ]
 
-        # Si la ciudad tiene Datos Históricos generales
-        for dh in ciudad.datos_historicos.filter(punto_interes__isnull=True):
+        if not solo_pendientes or c_info['nombre_pendiente']:
+            filas_ciudad.append([
+                Paragraph(f"<b>Nombre Ciudad</b><br/>"
+                          f"<font size=7 color='#6B7280'>[REF: CIUDAD:{ciudad.id}:nombre_miq]</font><br/>"
+                          f"<font size=6.5 color='#92400E'>Título del municipio</font><br/>"
+                          f"{'<font size=6.5 color=\"#DC2626\">● Pendiente</font>' if c_info['nombre_pendiente'] else '<font size=6.5 color=\"#059669\">✓ Traducido</font>'}", col_meta_style),
+                Paragraph(f"<b>{ciudad.nombre}</b>", col_spanish_style),
+                Paragraph(ciudad.nombre_miq if ciudad.nombre_miq else "<font color='#9CA3AF'>[ Escribir nombre en Miskito ]</font><br/><br/>________________________________________", col_miskito_style if ciudad.nombre_miq else col_write_prompt_style)
+            ])
+
+        if not solo_pendientes or c_info['descripcion_pendiente']:
+            filas_ciudad.append([
+                Paragraph(f"<b>Descripción Cultural</b><br/>"
+                          f"<font size=7 color='#6B7280'>[REF: CIUDAD:{ciudad.id}:descripcion_miq]</font><br/>"
+                          f"<font size=6.5 color='#92400E'>Resumen general cultural</font><br/>"
+                          f"{'<font size=6.5 color=\"#DC2626\">● Pendiente</font>' if c_info['descripcion_pendiente'] else '<font size=6.5 color=\"#059669\">✓ Traducido</font>'}", col_meta_style),
+                Paragraph(ciudad.descripcion or "<i>Sin descripción registrada</i>", col_spanish_style),
+                Paragraph(ciudad.descripcion_miq if ciudad.descripcion_miq else "<font color='#9CA3AF'>[ Escribir traducción al Miskito de la descripción ]</font><br/><br/><br/><br/>________________________________________<br/>________________________________________", col_miskito_style if ciudad.descripcion_miq else col_write_prompt_style)
+            ])
+
+        # Datos Históricos generales de la ciudad
+        for dh_dict in c_info['datos_historicos']:
+            dh = dh_dict['objeto']
             filas_ciudad.append([
                 Paragraph(f"<b>Dato Histórico / Leyenda</b><br/>"
                           f"<font size=7 color='#6B7280'>[REF: DATO:{dh.id}:titulo_miq & contenido_miq]</font><br/>"
@@ -419,32 +655,37 @@ def generar_pdf_traduccion_miskito(ciudades_ids=None, buffer_destino=None) -> io
                 Paragraph((dh.titulo_miq + "<br/>" + dh.contenido_miq) if (dh.titulo_miq and dh.contenido_miq) else "<font color='#9CA3AF'>[ Traducción de título e historia al Miskito ]</font><br/><br/><br/>________________________________________", col_miskito_style if dh.titulo_miq else col_write_prompt_style)
             ])
 
-        t_ciudad = Table(filas_ciudad, colWidths=[120, 210, 210])
-        t_ciudad.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#1E40AF")),
-            ('BOX', (0, 0), (-1, -1), 1, border_color),
-            ('INNERGRID', (0, 0), (-1, -1), 0.5, border_color),
-            ('BACKGROUND', (0, 1), (-1, 1), colors.HexColor("#F8FAFC")),
-            ('BACKGROUND', (2, 1), (2, -1), colors.HexColor("#FEFCE8")),  # Fondo ligeramente cálido para traducción
-            ('TOPPADDING', (0, 0), (-1, -1), 5),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
-            ('LEFTPADDING', (0, 0), (-1, -1), 6),
-            ('RIGHTPADDING', (0, 0), (-1, -1), 6),
-            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-        ]))
-        story.append(t_ciudad)
-        story.append(Spacer(1, 10))
+        if len(filas_ciudad) > 1:
+            t_ciudad = Table(filas_ciudad, colWidths=[120, 210, 210])
+            t_ciudad.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#1E40AF")),
+                ('BOX', (0, 0), (-1, -1), 1, border_color),
+                ('INNERGRID', (0, 0), (-1, -1), 0.5, border_color),
+                ('BACKGROUND', (0, 1), (-1, 1), colors.HexColor("#F8FAFC")),
+                ('BACKGROUND', (2, 1), (2, -1), colors.HexColor("#FEFCE8")),
+                ('TOPPADDING', (0, 0), (-1, -1), 5),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
+                ('LEFTPADDING', (0, 0), (-1, -1), 6),
+                ('RIGHTPADDING', (0, 0), (-1, -1), 6),
+                ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+            ]))
+            story.append(t_ciudad)
+            story.append(Spacer(1, 8))
+        else:
+            story.append(Paragraph("<font size=8.5 color='#059669'>✓ <i>Los datos generales de esta ciudad ya están completamente traducidos. A continuación se presentan los circuitos y paradas pendientes:</i></font>", subtitle_style))
+            story.append(Spacer(1, 4))
 
         # =====================================================================
         # CIRCUITOS CREATIVOS DENTRO DE LA CIUDAD
         # =====================================================================
-        for idx_cir, circuito in enumerate(ciudad.circuitos.all()):
+        for idx_cir, cir_info in enumerate(c_info['circuitos']):
+            circuito = cir_info['objeto']
             story.append(Spacer(1, 4))
-            
-            # Sub-banner Circuito
+
+            # Banner Circuito
             banner_circuito = Table(
                 [[
-                    Paragraph(f"<font size=10 color='white'><b>🧭 CIRCUITO CREATIVO #{idx_cir + 1}: {circuito.nombre.upper()}</b></font>", table_header_style),
+                    Paragraph(f"<font size=10 color='white'><b>🧭 CIRCUITO CREATIVO: {circuito.nombre.upper()}</b></font>", table_header_style),
                     Paragraph(f"<font size=8 color='#FEF3C7'>Dificultad: {circuito.dificultad} • {circuito.distancia_km} km • {circuito.duracion_estimada} • ID #{circuito.id}</font>", ParagraphStyle('CR', parent=table_header_style, alignment=2))
                 ]],
                 colWidths=[320, 220]
@@ -464,67 +705,79 @@ def generar_pdf_traduccion_miskito(ciudades_ids=None, buffer_destino=None) -> io
                     Paragraph("<b>Campo & Referencia</b>", table_header_style),
                     Paragraph("<b>Texto Original en Español</b>", table_header_style),
                     Paragraph("<b>Traducción al Miskito (Miskitu bil)</b>", table_header_style),
-                ],
-                # Nombre del Circuito
-                [
-                    Paragraph(f"<b>Nombre del Circuito</b><br/>"
-                              f"<font size=7 color='#6B7280'>[REF: CIRCUITO:{circuito.id}:nombre_miq]</font><br/>"
-                              f"<font size=6.5 color='#92400E'>Nombre oficial del recorrido</font>", col_meta_style),
-                    Paragraph(f"<b>{circuito.nombre}</b>", col_spanish_style),
-                    Paragraph(circuito.nombre_miq if circuito.nombre_miq else "<font color='#9CA3AF'>[ Escribir nombre del circuito en Miskito ]</font><br/><br/>________________________________________", col_miskito_style if circuito.nombre_miq else col_write_prompt_style)
-                ],
-                # Descripción del Circuito
-                [
-                    Paragraph(f"<b>Descripción del Recorrido</b><br/>"
-                              f"<font size=7 color='#6B7280'>[REF: CIRCUITO:{circuito.id}:descripcion_miq]</font><br/>"
-                              f"<font size=6.5 color='#92400E'>Contexto temático de la ruta</font>", col_meta_style),
-                    Paragraph(circuito.descripcion or "<i>Sin descripción</i>", col_spanish_style),
-                    Paragraph(circuito.descripcion_miq if circuito.descripcion_miq else "<font color='#9CA3AF'>[ Escribir descripción del circuito en Miskito ]</font><br/><br/><br/>________________________________________<br/>________________________________________", col_miskito_style if circuito.descripcion_miq else col_write_prompt_style)
                 ]
             ]
 
-            t_circuito = Table(filas_circuito, colWidths=[120, 210, 210])
-            t_circuito.setStyle(TableStyle([
-                ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#B45309")),
-                ('BOX', (0, 0), (-1, -1), 1, border_color),
-                ('INNERGRID', (0, 0), (-1, -1), 0.5, border_color),
-                ('BACKGROUND', (0, 1), (-1, 1), colors.HexColor("#FFFBEB")),
-                ('BACKGROUND', (2, 1), (2, -1), colors.HexColor("#FEFCE8")),
-                ('TOPPADDING', (0, 0), (-1, -1), 4),
-                ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
-                ('LEFTPADDING', (0, 0), (-1, -1), 6),
-                ('RIGHTPADDING', (0, 0), (-1, -1), 6),
-                ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-            ]))
-            story.append(t_circuito)
-            story.append(Spacer(1, 6))
+            if not solo_pendientes or cir_info['nombre_pendiente']:
+                filas_circuito.append([
+                    Paragraph(f"<b>Nombre del Circuito</b><br/>"
+                              f"<font size=7 color='#6B7280'>[REF: CIRCUITO:{circuito.id}:nombre_miq]</font><br/>"
+                              f"<font size=6.5 color='#92400E'>Nombre oficial del recorrido</font><br/>"
+                              f"{'<font size=6.5 color=\"#DC2626\">● Pendiente</font>' if cir_info['nombre_pendiente'] else '<font size=6.5 color=\"#059669\">✓ Traducido</font>'}", col_meta_style),
+                    Paragraph(f"<b>{circuito.nombre}</b>", col_spanish_style),
+                    Paragraph(circuito.nombre_miq if circuito.nombre_miq else "<font color='#9CA3AF'>[ Escribir nombre del circuito en Miskito ]</font><br/><br/>________________________________________", col_miskito_style if circuito.nombre_miq else col_write_prompt_style)
+                ])
+
+            if not solo_pendientes or cir_info['descripcion_pendiente']:
+                filas_circuito.append([
+                    Paragraph(f"<b>Descripción del Recorrido</b><br/>"
+                              f"<font size=7 color='#6B7280'>[REF: CIRCUITO:{circuito.id}:descripcion_miq]</font><br/>"
+                              f"<font size=6.5 color='#92400E'>Contexto temático de la ruta</font><br/>"
+                              f"{'<font size=6.5 color=\"#DC2626\">● Pendiente</font>' if cir_info['descripcion_pendiente'] else '<font size=6.5 color=\"#059669\">✓ Traducido</font>'}", col_meta_style),
+                    Paragraph(circuito.descripcion or "<i>Sin descripción</i>", col_spanish_style),
+                    Paragraph(circuito.descripcion_miq if circuito.descripcion_miq else "<font color='#9CA3AF'>[ Escribir descripción del circuito en Miskito ]</font><br/><br/><br/>________________________________________<br/>________________________________________", col_miskito_style if circuito.descripcion_miq else col_write_prompt_style)
+                ])
+
+            if len(filas_circuito) > 1:
+                t_circuito = Table(filas_circuito, colWidths=[120, 210, 210])
+                t_circuito.setStyle(TableStyle([
+                    ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#B45309")),
+                    ('BOX', (0, 0), (-1, -1), 1, border_color),
+                    ('INNERGRID', (0, 0), (-1, -1), 0.5, border_color),
+                    ('BACKGROUND', (0, 1), (-1, 1), colors.HexColor("#FFFBEB")),
+                    ('BACKGROUND', (2, 1), (2, -1), colors.HexColor("#FEFCE8")),
+                    ('TOPPADDING', (0, 0), (-1, -1), 4),
+                    ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+                    ('LEFTPADDING', (0, 0), (-1, -1), 6),
+                    ('RIGHTPADDING', (0, 0), (-1, -1), 6),
+                    ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+                ]))
+                story.append(t_circuito)
+                story.append(Spacer(1, 4))
 
             # -----------------------------------------------------------------
-            # PUNTOS DE INTERÉS DEL CIRCUITO
+            # PUNTOS DE INTERÉS PENDIENTES DEL CIRCUITO
             # -----------------------------------------------------------------
-            puntos = circuito.puntos_interes.all()
-            if puntos.exists():
-                story.append(Paragraph(f"<b>Paradas y Puntos de Interés de la Ruta ({puntos.count()} estaciones):</b>", section_header_style))
+            puntos_lista = cir_info['puntos']
+            if len(puntos_lista) > 0:
+                story.append(Paragraph(f"<b>Paradas del Circuito por Traducir ({len(puntos_lista)} pendiente(s)):</b>", section_header_style))
 
-                for p in puntos:
-                    filas_punto = [
-                        [
+                for p_info in puntos_lista:
+                    p = p_info['objeto']
+                    filas_punto = []
+
+                    if not solo_pendientes or p_info['nombre_pendiente']:
+                        filas_punto.append([
                             Paragraph(f"<b>Parada #{p.orden}: {p.nombre}</b><br/>"
-                                      f"<font size=7 color='#6B7280'>Categoría: {p.get_tipo_display()}<br/>[REF: PUNTO:{p.id}:nombre_miq]</font>", col_meta_style),
+                                      f"<font size=7 color='#6B7280'>Categoría: {p.get_tipo_display()}<br/>[REF: PUNTO:{p.id}:nombre_miq]</font><br/>"
+                                      f"{'<font size=6.5 color=\"#DC2626\">● Nombre pendiente</font>' if p_info['nombre_pendiente'] else '<font size=6.5 color=\"#059669\">✓ Traducido</font>'}", col_meta_style),
                             Paragraph(f"<b>{p.nombre}</b>", col_spanish_style),
                             Paragraph(p.nombre_miq if p.nombre_miq else "<font color='#9CA3AF'>[ Nombre del punto en Miskito ]</font><br/>________________________________________", col_miskito_style if p.nombre_miq else col_write_prompt_style)
-                        ],
-                        [
+                        ])
+
+                    if not solo_pendientes or p_info['descripcion_pendiente']:
+                        filas_punto.append([
                             Paragraph(f"<b>Descripción del Atractivo</b><br/>"
                                       f"<font size=7 color='#6B7280'>[REF: PUNTO:{p.id}:descripcion_miq]</font><br/>"
-                                      f"<font size=6.5 color='#0F766E'>Explicación de qué se hace o aprecia aquí</font>", col_meta_style),
+                                      f"<font size=6.5 color='#0F766E'>Explicación de qué se hace o aprecia aquí</font><br/>"
+                                      f"{'<font size=6.5 color=\"#DC2626\">● Descripción pendiente</font>' if p_info['descripcion_pendiente'] else '<font size=6.5 color=\"#059669\">✓ Traducido</font>'}", col_meta_style),
                             Paragraph(p.descripcion or "<i>Sin descripción</i>", col_spanish_style),
                             Paragraph(p.descripcion_miq if p.descripcion_miq else "<font color='#9CA3AF'>[ Traducción al Miskito del atractivo y actividades ]</font><br/><br/><br/>________________________________________<br/>________________________________________", col_miskito_style if p.descripcion_miq else col_write_prompt_style)
-                        ]
-                    ]
+                        ])
 
-                    # Si el punto tiene Datos Históricos o Tradiciones asociadas
-                    for dh_p in p.datos_historicos.all():
+                    # Datos históricos del punto
+                    for dh_p_dict in p_info['datos_historicos']:
+                        dh_p = dh_p_dict['objeto']
                         filas_punto.append([
                             Paragraph(f"<b>Dato / Tradición</b><br/>"
                                       f"<font size=7 color='#6B7280'>[REF: DATO:{dh_p.id}:titulo_miq & contenido_miq]<br/>Tipo: {dh_p.tipo}</font>", col_meta_style),
@@ -532,23 +785,23 @@ def generar_pdf_traduccion_miskito(ciudades_ids=None, buffer_destino=None) -> io
                             Paragraph((dh_p.titulo_miq + "<br/>" + dh_p.contenido_miq) if (dh_p.titulo_miq and dh_p.contenido_miq) else "<font color='#9CA3AF'>[ Traducción de leyenda o tradición al Miskito ]</font><br/><br/>________________________________________", col_miskito_style if dh_p.titulo_miq else col_write_prompt_style)
                         ])
 
-                    t_punto = Table(filas_punto, colWidths=[120, 210, 210])
-                    t_punto.setStyle(TableStyle([
-                        ('BACKGROUND', (0, 0), (0, -1), colors.HexColor("#F0FDF4")),
-                        ('BACKGROUND', (2, 0), (2, -1), colors.HexColor("#FEFCE8")),
-                        ('BOX', (0, 0), (-1, -1), 0.8, colors.HexColor("#86EFAC")),
-                        ('INNERGRID', (0, 0), (-1, -1), 0.5, colors.HexColor("#E5E7EB")),
-                        ('TOPPADDING', (0, 0), (-1, -1), 4),
-                        ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
-                        ('LEFTPADDING', (0, 0), (-1, -1), 6),
-                        ('RIGHTPADDING', (0, 0), (-1, -1), 6),
-                        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-                    ]))
-                    # Mantener cada punto de interés agrupado para evitar cortes feos si es posible
-                    story.append(KeepTogether(t_punto))
-                    story.append(Spacer(1, 4))
+                    if len(filas_punto) > 0:
+                        t_punto = Table(filas_punto, colWidths=[120, 210, 210])
+                        t_punto.setStyle(TableStyle([
+                            ('BACKGROUND', (0, 0), (0, -1), colors.HexColor("#F0FDF4")),
+                            ('BACKGROUND', (2, 0), (2, -1), colors.HexColor("#FEFCE8")),
+                            ('BOX', (0, 0), (-1, -1), 0.8, colors.HexColor("#86EFAC")),
+                            ('INNERGRID', (0, 0), (-1, -1), 0.5, colors.HexColor("#E5E7EB")),
+                            ('TOPPADDING', (0, 0), (-1, -1), 4),
+                            ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+                            ('LEFTPADDING', (0, 0), (-1, -1), 6),
+                            ('RIGHTPADDING', (0, 0), (-1, -1), 6),
+                            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+                        ]))
+                        story.append(KeepTogether(t_punto))
+                        story.append(Spacer(1, 4))
 
-            story.append(Spacer(1, 8))
+            story.append(Spacer(1, 6))
 
     # Construir documento PDF con NumberedCanvas
     doc.build(story, canvasmaker=NumberedCanvas)
