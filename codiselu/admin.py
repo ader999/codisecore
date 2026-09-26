@@ -1,11 +1,13 @@
-from django.contrib import admin
+from django.contrib import admin, messages
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
+from django.http import FileResponse
 from .models import (
     User, Ciudad, CircuitoCreativo, PuntoInteres, DatoHistorico,
     GaleriaMultimedia, UsuarioPuntoVisitado, Empresa, OportunidadInversion,
     InversionTurista, Evento, EventoAsistencia, Publicacion, PublicacionImagen,
     ComentarioPublicacion
 )
+from .pdf_export_service import generar_pdf_traduccion_miskito
 
 # Personalización del Panel de Control Codice路
 admin.site.site_header = "Codice路"
@@ -26,7 +28,7 @@ class UserAdmin(BaseUserAdmin):
 
 class OcultarTraduccionesAlCrearMixin:
     """
-    Mixin para ModelAdmin que oculta las secciones de traducción (Inglés y Mandarín)
+    Mixin para ModelAdmin que oculta las secciones de traducción (Inglés, Mandarín, Miskito)
     durante la creación inicial de un registro (obj is None) para evitar confusión al usuario.
     El sistema autocompleta las traducciones al guardar mediante save().
     Una vez guardado el registro (obj is not None), se muestran las secciones de traducción
@@ -37,7 +39,7 @@ class OcultarTraduccionesAlCrearMixin:
         if obj is None:
             return [
                 fs for fs in fieldsets
-                if not any(kw in fs[0].lower() for kw in ['inglés', 'ingles', 'mandarín', 'mandarin', 'traducción', 'traduccion'])
+                if not any(kw in fs[0].lower() for kw in ['inglés', 'ingles', 'mandarín', 'mandarin', 'miskito', 'miskitu', 'traducción', 'traduccion'])
             ]
         return fieldsets
 
@@ -49,7 +51,7 @@ class DatoHistoricoInline(admin.TabularInline):
     def get_fields(self, request, obj=None):
         if obj is None:
             return ('titulo', 'tipo', 'contenido', 'epoca_o_ano')
-        return ('titulo', 'tipo', 'contenido', 'epoca_o_ano', 'titulo_en', 'titulo_zh', 'contenido_en', 'contenido_zh')
+        return ('titulo', 'tipo', 'contenido', 'epoca_o_ano', 'titulo_en', 'titulo_zh', 'titulo_miq', 'contenido_en', 'contenido_zh', 'contenido_miq')
 
 
 class GaleriaMultimediaInline(admin.TabularInline):
@@ -60,9 +62,10 @@ class GaleriaMultimediaInline(admin.TabularInline):
 
 @admin.register(Ciudad)
 class CiudadAdmin(OcultarTraduccionesAlCrearMixin, admin.ModelAdmin):
-    list_display = ('nombre', 'nombre_en', 'nombre_zh', 'latitud_centro', 'longitud_centro', 'ver_circuitos')
-    search_fields = ('nombre', 'nombre_en', 'nombre_zh')
+    list_display = ('nombre', 'nombre_en', 'nombre_zh', 'nombre_miq', 'latitud_centro', 'longitud_centro', 'ver_circuitos')
+    search_fields = ('nombre', 'nombre_en', 'nombre_zh', 'nombre_miq')
     inlines = [DatoHistoricoInline, GaleriaMultimediaInline]
+    actions = ['exportar_a_pdf_miskito']
     fieldsets = (
         ('Información General (Español)', {
             'fields': ('nombre', 'descripcion', 'imagen_portada', 'latitud_centro', 'longitud_centro')
@@ -75,6 +78,10 @@ class CiudadAdmin(OcultarTraduccionesAlCrearMixin, admin.ModelAdmin):
             'fields': ('nombre_zh', 'descripcion_zh'),
             'classes': ('collapse',)
         }),
+        ('Traducción al Miskito (Manual)', {
+            'fields': ('nombre_miq', 'descripcion_miq'),
+            'classes': ('collapse',)
+        }),
     )
 
     def ver_circuitos(self, obj):
@@ -82,12 +89,47 @@ class CiudadAdmin(OcultarTraduccionesAlCrearMixin, admin.ModelAdmin):
         return f"{count} circuito(s)"
     ver_circuitos.short_description = "Circuitos"
 
+    @admin.action(description="📄 Exportar a PDF para Traducción Miskito (Ciudades con Circuitos)")
+    def exportar_a_pdf_miskito(self, request, queryset):
+        ciudades_con_circuitos = queryset.filter(circuitos__isnull=False).distinct()
+        if not ciudades_con_circuitos.exists():
+            self.message_user(
+                request,
+                "Ninguna de las ciudades seleccionadas tiene circuitos creativos para traducir.",
+                level=messages.WARNING
+            )
+            return None
+
+        ciudades_ids = list(ciudades_con_circuitos.values_list('id', flat=True))
+        pdf_buffer = generar_pdf_traduccion_miskito(ciudades_ids=ciudades_ids)
+        response = FileResponse(pdf_buffer, content_type='application/pdf')
+        response['Content-Disposition'] = 'attachment; filename="Codice_Traduccion_Miskito.pdf"'
+        return response
+
+    def get_urls(self):
+        from django.urls import path
+        urls = super().get_urls()
+        custom_urls = [
+            path(
+                'exportar-miskito-pdf/',
+                self.admin_site.admin_view(self.vista_exportar_miskito_pdf),
+                name='codiselu_ciudad_exportar_miskito'
+            ),
+        ]
+        return custom_urls + urls
+
+    def vista_exportar_miskito_pdf(self, request):
+        pdf_buffer = generar_pdf_traduccion_miskito()
+        response = FileResponse(pdf_buffer, content_type='application/pdf')
+        response['Content-Disposition'] = 'attachment; filename="Codice_Documentacion_Traduccion_Miskito.pdf"'
+        return response
+
 
 @admin.register(CircuitoCreativo)
 class CircuitoCreativoAdmin(OcultarTraduccionesAlCrearMixin, admin.ModelAdmin):
     list_display = ('nombre', 'ciudad', 'distancia_km', 'duracion_estimada', 'dificultad')
     list_filter = ('ciudad', 'dificultad')
-    search_fields = ('nombre', 'nombre_en', 'nombre_zh', 'descripcion')
+    search_fields = ('nombre', 'nombre_en', 'nombre_zh', 'nombre_miq', 'descripcion')
     fieldsets = (
         ('Información General (Español)', {
             'fields': ('ciudad', 'nombre', 'descripcion', 'distancia_km', 'duracion_estimada', 'dificultad', 'imagen_mapa')
@@ -100,6 +142,10 @@ class CircuitoCreativoAdmin(OcultarTraduccionesAlCrearMixin, admin.ModelAdmin):
             'fields': ('nombre_zh', 'descripcion_zh'),
             'classes': ('collapse',)
         }),
+        ('Traducción al Miskito (Manual)', {
+            'fields': ('nombre_miq', 'descripcion_miq'),
+            'classes': ('collapse',)
+        }),
     )
 
 
@@ -107,7 +153,7 @@ class CircuitoCreativoAdmin(OcultarTraduccionesAlCrearMixin, admin.ModelAdmin):
 class PuntoInteresAdmin(OcultarTraduccionesAlCrearMixin, admin.ModelAdmin):
     list_display = ('orden', 'nombre', 'circuito', 'tipo')
     list_filter = ('tipo', 'circuito__ciudad')
-    search_fields = ('nombre', 'nombre_en', 'nombre_zh', 'descripcion')
+    search_fields = ('nombre', 'nombre_en', 'nombre_zh', 'nombre_miq', 'descripcion')
     inlines = [DatoHistoricoInline, GaleriaMultimediaInline]
     fieldsets = (
         ('Información General (Español)', {
@@ -121,6 +167,10 @@ class PuntoInteresAdmin(OcultarTraduccionesAlCrearMixin, admin.ModelAdmin):
             'fields': ('nombre_zh', 'descripcion_zh'),
             'classes': ('collapse',)
         }),
+        ('Traducción al Miskito (Manual)', {
+            'fields': ('nombre_miq', 'descripcion_miq'),
+            'classes': ('collapse',)
+        }),
     )
 
 
@@ -128,7 +178,7 @@ class PuntoInteresAdmin(OcultarTraduccionesAlCrearMixin, admin.ModelAdmin):
 class DatoHistoricoAdmin(OcultarTraduccionesAlCrearMixin, admin.ModelAdmin):
     list_display = ('titulo', 'tipo', 'epoca_o_ano', 'ciudad', 'punto_interes')
     list_filter = ('tipo', 'ciudad')
-    search_fields = ('titulo', 'titulo_en', 'titulo_zh', 'contenido')
+    search_fields = ('titulo', 'titulo_en', 'titulo_zh', 'titulo_miq', 'contenido')
     fieldsets = (
         ('Información General (Español)', {
             'fields': ('ciudad', 'punto_interes', 'titulo', 'tipo', 'contenido', 'epoca_o_ano')
@@ -139,6 +189,10 @@ class DatoHistoricoAdmin(OcultarTraduccionesAlCrearMixin, admin.ModelAdmin):
         }),
         ('Traducción al Mandarín (Auto / Editable)', {
             'fields': ('titulo_zh', 'contenido_zh'),
+            'classes': ('collapse',)
+        }),
+        ('Traducción al Miskito (Manual)', {
+            'fields': ('titulo_miq', 'contenido_miq'),
             'classes': ('collapse',)
         }),
     )
@@ -182,8 +236,8 @@ class OportunidadInversionInline(admin.TabularInline):
                 'tipo_inversor_permitido', 'esta_activa'
             )
         return (
-            'titulo', 'titulo_en', 'titulo_zh',
-            'descripcion', 'descripcion_en', 'descripcion_zh',
+            'titulo', 'titulo_en', 'titulo_zh', 'titulo_miq',
+            'descripcion', 'descripcion_en', 'descripcion_zh', 'descripcion_miq',
             'monto_requerido', 'monto_minimo_inversion', 'monto_recaudado',
             'retorno_estimado', 'tipo_inversor_permitido', 'esta_activa'
         )
@@ -211,6 +265,10 @@ class EmpresaAdmin(OcultarTraduccionesAlCrearMixin, admin.ModelAdmin):
             'fields': ('nombre_zh', 'descripcion_zh'),
             'classes': ('collapse',)
         }),
+        ('Traducción al Miskito (Manual)', {
+            'fields': ('nombre_miq', 'descripcion_miq'),
+            'classes': ('collapse',)
+        }),
     )
 
 
@@ -233,6 +291,10 @@ class OportunidadInversionAdmin(OcultarTraduccionesAlCrearMixin, admin.ModelAdmi
         }),
         ('Traducción al Mandarín (Auto / Editable)', {
             'fields': ('titulo_zh', 'descripcion_zh'),
+            'classes': ('collapse',)
+        }),
+        ('Traducción al Miskito (Manual)', {
+            'fields': ('titulo_miq', 'descripcion_miq'),
             'classes': ('collapse',)
         }),
     )
@@ -272,6 +334,10 @@ class EventoAdmin(OcultarTraduccionesAlCrearMixin, admin.ModelAdmin):
         }),
         ('Traducción al Mandarín (Auto / Editable)', {
             'fields': ('titulo_zh', 'descripcion_zh', 'rango_celebracion_zh'),
+            'classes': ('collapse',)
+        }),
+        ('Traducción al Miskito (Manual)', {
+            'fields': ('titulo_miq', 'descripcion_miq', 'rango_celebracion_miq'),
             'classes': ('collapse',)
         }),
     )
