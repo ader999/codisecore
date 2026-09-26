@@ -89,7 +89,24 @@ class CiudadAdmin(OcultarTraduccionesAlCrearMixin, admin.ModelAdmin):
         return f"{count} circuito(s)"
     ver_circuitos.short_description = "Circuitos"
 
-    actions = ['exportar_a_pdf_miskito', 'exportar_a_pdf_miskito_completo']
+    actions = ['exportar_a_pdf_miskito_horizontal', 'exportar_a_pdf_miskito', 'exportar_a_pdf_miskito_completo']
+
+    @admin.action(description="📐 Exportar a PDF Miskito Horizontal (Hoja apaisada con columna ampliada)")
+    def exportar_a_pdf_miskito_horizontal(self, request, queryset):
+        ciudades_con_circuitos = queryset.filter(circuitos__isnull=False).distinct()
+        if not ciudades_con_circuitos.exists():
+            self.message_user(
+                request,
+                "Ninguna de las ciudades seleccionadas tiene circuitos creativos para traducir.",
+                level=messages.WARNING
+            )
+            return None
+
+        ciudades_ids = list(ciudades_con_circuitos.values_list('id', flat=True))
+        pdf_buffer = generar_pdf_traduccion_miskito(ciudades_ids=ciudades_ids, solo_pendientes=True, orientacion='horizontal')
+        response = FileResponse(pdf_buffer, content_type='application/pdf')
+        response['Content-Disposition'] = 'attachment; filename="Codice_Traduccion_Miskito_Horizontal.pdf"'
+        return response
 
     @admin.action(description="📄 Exportar a PDF Miskito (Solo lo pendiente por traducir)")
     def exportar_a_pdf_miskito(self, request, queryset):
@@ -103,7 +120,7 @@ class CiudadAdmin(OcultarTraduccionesAlCrearMixin, admin.ModelAdmin):
             return None
 
         ciudades_ids = list(ciudades_con_circuitos.values_list('id', flat=True))
-        pdf_buffer = generar_pdf_traduccion_miskito(ciudades_ids=ciudades_ids, solo_pendientes=True)
+        pdf_buffer = generar_pdf_traduccion_miskito(ciudades_ids=ciudades_ids, solo_pendientes=True, orientacion='vertical')
         response = FileResponse(pdf_buffer, content_type='application/pdf')
         response['Content-Disposition'] = 'attachment; filename="Codice_Traduccion_Miskito_Pendientes.pdf"'
         return response
@@ -120,7 +137,7 @@ class CiudadAdmin(OcultarTraduccionesAlCrearMixin, admin.ModelAdmin):
             return None
 
         ciudades_ids = list(ciudades_con_circuitos.values_list('id', flat=True))
-        pdf_buffer = generar_pdf_traduccion_miskito(ciudades_ids=ciudades_ids, solo_pendientes=False)
+        pdf_buffer = generar_pdf_traduccion_miskito(ciudades_ids=ciudades_ids, solo_pendientes=False, orientacion='vertical')
         response = FileResponse(pdf_buffer, content_type='application/pdf')
         response['Content-Disposition'] = 'attachment; filename="Codice_Traduccion_Miskito_Completo.pdf"'
         return response
@@ -139,9 +156,16 @@ class CiudadAdmin(OcultarTraduccionesAlCrearMixin, admin.ModelAdmin):
 
     def vista_exportar_miskito_pdf(self, request):
         solo_pend = request.GET.get('solo_pendientes', '1').lower() not in ('0', 'false', 'no')
-        pdf_buffer = generar_pdf_traduccion_miskito(solo_pendientes=solo_pend)
+        orientacion = request.GET.get('orientacion', request.GET.get('formato', 'vertical')).lower()
+        if request.GET.get('horizontal', '').lower() in ('1', 'true', 'yes'):
+            orientacion = 'horizontal'
+
+        es_horiz = orientacion in ('horizontal', 'landscape', 'h')
+        pdf_buffer = generar_pdf_traduccion_miskito(solo_pendientes=solo_pend, orientacion=orientacion)
         response = FileResponse(pdf_buffer, content_type='application/pdf')
-        nombre_archivo = "Codice_Documentacion_Miskito_Pendientes.pdf" if solo_pend else "Codice_Documentacion_Miskito_Completo.pdf"
+        sufijo_orient = "_Horizontal" if es_horiz else ""
+        sufijo_modo = "Pendientes" if solo_pend else "Completo"
+        nombre_archivo = f"Codice_Documentacion_Miskito_{sufijo_modo}{sufijo_orient}.pdf"
         response['Content-Disposition'] = f'attachment; filename="{nombre_archivo}"'
         return response
 
