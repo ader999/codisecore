@@ -811,14 +811,13 @@ def generar_pdf_traduccion_miskito(ciudades_ids=None, buffer_destino=None, solo_
         ]))
 
         bloque_contenido = [
-            [Paragraph("🤝 <b>RECONOCIMIENTO Y AGRADECIMIENTO AL EQUIPO TRADUCTOR</b>", agradecimiento_estilo_titulo)],
+            [Paragraph("<b>AGRADECIMIENTO AL EQUIPO TRADUCTOR</b>", agradecimiento_estilo_titulo)],
             [Spacer(1, 3)],
             [Paragraph(texto_agradecimiento_html, agradecimiento_estilo_texto)],
             [Spacer(1, 3)],
             [t_reg],
             [Spacer(1, 5)],
-            [Paragraph("¡TINGKI PALI!", agradecimiento_estilo_miskito)],
-            [Paragraph("Tingki • <i>(Muchas gracias en idioma Miskito / Miskitu bil)</i>", agradecimiento_submiskito)]
+            [Paragraph("¡TINGKI PALI!", agradecimiento_estilo_miskito)]
         ]
 
         t_agrad = Table(bloque_contenido, colWidths=[ancho_imprimible])
