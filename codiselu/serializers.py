@@ -324,6 +324,8 @@ class TraduccionSerializerMixin:
                 return 'zh'
             if 'en' in lang_norm:
                 return 'en'
+            if 'miq' in lang_norm or 'miskit' in lang_norm:
+                return 'miq'
             return 'es'
 
         # 2. Header HTTP Accept-Language
@@ -334,6 +336,8 @@ class TraduccionSerializerMixin:
                 return 'zh'
             if 'en' in accept_lang_lower:
                 return 'en'
+            if 'miq' in accept_lang_lower or 'miskit' in accept_lang_lower:
+                return 'miq'
 
         return 'es'
 
@@ -341,13 +345,14 @@ class TraduccionSerializerMixin:
         data = super().to_representation(instance)
         idioma = self.obtener_idioma_cliente()
 
-        traducciones = {'es': {}, 'en': {}, 'zh': {}}
+        traducciones = {'es': {}, 'en': {}, 'zh': {}, 'miq': {}}
 
         for campo in self.CAMPOS_TRADUCIBLES:
             if hasattr(instance, campo):
                 val_es = getattr(instance, campo, None)
                 val_en = getattr(instance, f"{campo}_en", None)
                 val_zh = getattr(instance, f"{campo}_zh", None)
+                val_miq = getattr(instance, f"{campo}_miq", None)
 
                 if val_es is not None:
                     traducciones['es'][campo] = val_es
@@ -355,11 +360,15 @@ class TraduccionSerializerMixin:
                     traducciones['en'][campo] = val_en
                 if val_zh is not None:
                     traducciones['zh'][campo] = val_zh
+                if val_miq is not None:
+                    traducciones['miq'][campo] = val_miq
 
                 if idioma == 'en' and val_en:
                     data[campo] = val_en
                 elif idioma == 'zh' and val_zh:
                     data[campo] = val_zh
+                elif idioma == 'miq' and val_miq:
+                    data[campo] = val_miq
                 elif idioma == 'es' and val_es:
                     data[campo] = val_es
 
@@ -369,18 +378,24 @@ class TraduccionSerializerMixin:
                 data['ciudad_nombre'] = instance.ciudad.nombre_en
             elif idioma == 'zh' and instance.ciudad.nombre_zh:
                 data['ciudad_nombre'] = instance.ciudad.nombre_zh
+            elif idioma == 'miq' and instance.ciudad.nombre_miq:
+                data['ciudad_nombre'] = instance.ciudad.nombre_miq
         if 'circuito_nombre' in data and hasattr(instance, 'circuito') and instance.circuito:
             if idioma == 'en' and instance.circuito.nombre_en:
                 data['circuito_nombre'] = instance.circuito.nombre_en
             elif idioma == 'zh' and instance.circuito.nombre_zh:
                 data['circuito_nombre'] = instance.circuito.nombre_zh
+            elif idioma == 'miq' and instance.circuito.nombre_miq:
+                data['circuito_nombre'] = instance.circuito.nombre_miq
         if 'empresa_nombre' in data and hasattr(instance, 'empresa') and instance.empresa:
             if idioma == 'en' and instance.empresa.nombre_en:
                 data['empresa_nombre'] = instance.empresa.nombre_en
             elif idioma == 'zh' and instance.empresa.nombre_zh:
                 data['empresa_nombre'] = instance.empresa.nombre_zh
+            elif idioma == 'miq' and instance.empresa.nombre_miq:
+                data['empresa_nombre'] = instance.empresa.nombre_miq
 
-        if any(traducciones['en'].values()) or any(traducciones['zh'].values()):
+        if any(traducciones['en'].values()) or any(traducciones['zh'].values()) or any(traducciones['miq'].values()):
             data['traducciones'] = traducciones
 
         return data
@@ -656,7 +671,7 @@ class EventoSerializer(TraduccionSerializerMixin, serializers.ModelSerializer):
         fields = [
             'id', 'creador', 'creador_username', 'empresa', 'empresa_nombre',
             'ciudad', 'ciudad_nombre', 'titulo', 'descripcion',
-            'solo_este_ano', 'rango_celebracion', 'rango_celebracion_en', 'rango_celebracion_zh',
+            'solo_este_ano', 'rango_celebracion', 'rango_celebracion_en', 'rango_celebracion_zh', 'rango_celebracion_miq',
             'fecha_inicio', 'fecha_fin', 'ubicacion', 'latitud', 'longitud', 'imagen',
             'precio_entrada', 'es_gratuito', 'cupo_maximo', 'es_oficial',
             'dias_previos_mural', 'en_mural', 'esta_activo', 'total_granos_cafe',

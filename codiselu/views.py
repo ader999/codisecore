@@ -250,6 +250,53 @@ class CiudadViewSet(viewsets.ModelViewSet):
     serializer_class = CiudadSerializer
     permission_classes = [permissions.AllowAny]
 
+    @action(detail=False, methods=['get'], url_path='exportar-miskito-pdf')
+    def exportar_miskito_pdf(self, request):
+        """
+        Descarga la guía en PDF para traductores al idioma Miskito (Miskitu).
+        Excluye automáticamente ciudades que no tienen circuitos creativos.
+        Permite filtrar ciudades específicas con ?ciudades=11,14 o ?ids=11,14
+        """
+        from django.http import FileResponse
+        from .pdf_export_service import generar_pdf_traduccion_miskito
+
+        ciudades_ids = None
+        ciudades_param = request.query_params.get('ciudades') or request.query_params.get('ids')
+        if ciudades_param:
+            try:
+                ciudades_ids = [int(x.strip()) for x in ciudades_param.split(',') if x.strip().isdigit()]
+            except Exception:
+                ciudades_ids = None
+
+        pdf_buffer = generar_pdf_traduccion_miskito(ciudades_ids=ciudades_ids)
+        response = FileResponse(pdf_buffer, content_type='application/pdf')
+        response['Content-Disposition'] = 'attachment; filename="Codice_Guia_Traduccion_Miskito.pdf"'
+        return response
+
+
+class ExportarMiskitoPDFView(APIView):
+    """
+    Endpoint directo para exportar el documento PDF de traducción a Miskito.
+    """
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request):
+        from django.http import FileResponse
+        from .pdf_export_service import generar_pdf_traduccion_miskito
+
+        ciudades_ids = None
+        ciudades_param = request.query_params.get('ciudades') or request.query_params.get('ids')
+        if ciudades_param:
+            try:
+                ciudades_ids = [int(x.strip()) for x in ciudades_param.split(',') if x.strip().isdigit()]
+            except Exception:
+                ciudades_ids = None
+
+        pdf_buffer = generar_pdf_traduccion_miskito(ciudades_ids=ciudades_ids)
+        response = FileResponse(pdf_buffer, content_type='application/pdf')
+        response['Content-Disposition'] = 'attachment; filename="Codice_Guia_Traduccion_Miskito.pdf"'
+        return response
+
 
 class CircuitoCreativoViewSet(viewsets.ModelViewSet):
     queryset = CircuitoCreativo.objects.all().order_by('id')

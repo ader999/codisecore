@@ -11,6 +11,8 @@ IDIOMAS_SOPORTADOS = {
     'zh-cn': 'zh-CN',
     'zh-hans': 'zh-CN',
     'es': 'es',        # Español
+    'miq': 'miq',      # Miskito
+    'miskito': 'miq',  # Miskito
 }
 
 # Caché en memoria para evitar peticiones duplicadas durante la ejecución

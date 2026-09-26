@@ -27,7 +27,8 @@ from .views import (
     ComentarioPublicacionViewSet,
     LandingPageView,
     AsistenteChatView,
-    HealthCheckView
+    HealthCheckView,
+    ExportarMiskitoPDFView
 )
 
 router = DefaultRouter()
@@ -75,6 +76,9 @@ urlpatterns = [
     path('api/register/', RegisterView.as_view(), name='register'),
     path('api/login/', LoginView.as_view(), name='login'),
     path('api/google/', GoogleAuthView.as_view(), name='google_auth_direct'),
+    # Exportación de documentación PDF para traducción a Miskito
+    path('api/exportar-miskito-pdf/', ExportarMiskitoPDFView.as_view(), name='exportar_miskito_pdf'),
+    path('api/traduccion/miskito-pdf/', ExportarMiskitoPDFView.as_view(), name='traduccion_miskito_pdf'),
     path('api/', include(router.urls)),
 ]
 
