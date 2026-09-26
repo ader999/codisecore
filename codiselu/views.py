@@ -286,6 +286,36 @@ class CiudadViewSet(viewsets.ModelViewSet):
         response['Content-Disposition'] = f'attachment; filename="{nombre_archivo}"'
         return response
 
+    @action(detail=False, methods=['get'], url_path='exportar-miskito-excel')
+    def exportar_miskito_excel(self, request):
+        """
+        Descarga la plantilla en Excel (.xlsx) para traductores al idioma Miskito (Miskitu).
+        Excluye automáticamente ciudades que no tienen circuitos creativos.
+        Por defecto incluye únicamente la información pendiente de traducción.
+        Permite:
+        - ?solo_pendientes=1 (por defecto) o ?solo_pendientes=0 (completo)
+        - ?ciudades=11,14 o ?ids=11,14 para filtrar ciudades específicas
+        """
+        from django.http import FileResponse
+        from .excel_export_service import generar_excel_traduccion_miskito
+
+        ciudades_ids = None
+        ciudades_param = request.query_params.get('ciudades') or request.query_params.get('ids')
+        if ciudades_param:
+            try:
+                ciudades_ids = [int(x.strip()) for x in ciudades_param.split(',') if x.strip().isdigit()]
+            except Exception:
+                ciudades_ids = None
+
+        param_pend = request.query_params.get('solo_pendientes', request.query_params.get('pendientes', '1'))
+        solo_pend = str(param_pend).lower() not in ('0', 'false', 'no')
+
+        excel_buffer = generar_excel_traduccion_miskito(ciudades_ids=ciudades_ids, solo_pendientes=solo_pend)
+        nombre_archivo = f"Codice_Plantilla_Traduccion_Miskito_{'Pendientes' if solo_pend else 'Completo'}.xlsx"
+        response = FileResponse(excel_buffer, content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+        response['Content-Disposition'] = f'attachment; filename="{nombre_archivo}"'
+        return response
+
 
 class ExportarMiskitoPDFView(APIView):
     """
@@ -317,6 +347,34 @@ class ExportarMiskitoPDFView(APIView):
         sufijo_orient = "_Horizontal" if es_horiz else ""
         nombre_archivo = f"Codice_Guia_Traduccion_Miskito_{'Pendientes' if solo_pend else 'Completo'}{sufijo_orient}.pdf"
         response = FileResponse(pdf_buffer, content_type='application/pdf')
+        response['Content-Disposition'] = f'attachment; filename="{nombre_archivo}"'
+        return response
+
+
+class ExportarMiskitoExcelView(APIView):
+    """
+    Endpoint directo para exportar la plantilla Excel (.xlsx) de traducción a Miskito.
+    """
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request):
+        from django.http import FileResponse
+        from .excel_export_service import generar_excel_traduccion_miskito
+
+        ciudades_ids = None
+        ciudades_param = request.query_params.get('ciudades') or request.query_params.get('ids')
+        if ciudades_param:
+            try:
+                ciudades_ids = [int(x.strip()) for x in ciudades_param.split(',') if x.strip().isdigit()]
+            except Exception:
+                ciudades_ids = None
+
+        param_pend = request.query_params.get('solo_pendientes', request.query_params.get('pendientes', '1'))
+        solo_pend = str(param_pend).lower() not in ('0', 'false', 'no')
+
+        excel_buffer = generar_excel_traduccion_miskito(ciudades_ids=ciudades_ids, solo_pendientes=solo_pend)
+        nombre_archivo = f"Codice_Plantilla_Traduccion_Miskito_{'Pendientes' if solo_pend else 'Completo'}.xlsx"
+        response = FileResponse(excel_buffer, content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
         response['Content-Disposition'] = f'attachment; filename="{nombre_archivo}"'
         return response
 
