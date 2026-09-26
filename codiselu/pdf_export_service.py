@@ -52,7 +52,7 @@ class NumberedCanvas(canvas.Canvas):
 
         # Encabezado (a partir de la página 2)
         if self._pageNumber > 1:
-            self.drawString(36, 11 * inch - 26, "Codice路 • Guía de Contenidos para Traducción al Idioma Miskito (Miskitu)")
+            self.drawString(36, 11 * inch - 26, "Codice Lu • Guía Oficial para Traducción al Idioma Miskito (Miskitu)")
             self.setStrokeColor(colors.HexColor("#D1D5DB"))
             self.setLineWidth(0.5)
             self.line(36, 11 * inch - 29, 8.5 * inch - 36, 11 * inch - 29)
@@ -62,7 +62,7 @@ class NumberedCanvas(canvas.Canvas):
         self.setLineWidth(0.5)
         self.line(36, 32, 8.5 * inch - 36, 32)
 
-        self.drawString(36, 22, "Codice路 • Plataforma de Turismo Creativo de Nicaragua • Uso confidencial para traductores")
+        self.drawString(36, 22, "Codice Lu • Red Nacional de Ciudades Creativas de Nicaragua • Uso confidencial para traductores")
         page_str = f"Página {self._pageNumber} de {page_count}"
         self.drawRightString(8.5 * inch - 36, 22, page_str)
 
@@ -72,6 +72,33 @@ class NumberedCanvas(canvas.Canvas):
 def tiene_traduccion(valor) -> bool:
     """Verifica si un campo ya posee traducción al Miskito (no nulo y no en blanco)."""
     return bool(valor and str(valor).strip())
+
+
+def crear_bloque_escritura_miskito(texto_traducido, prompt_guia, num_lineas=3, line_height=22, prompt_style=None, miskito_style=None):
+    """
+    Genera el contenido de la celda de traducción al Miskito.
+    - Si el campo ya posee traducción registrada: muestra el texto traducido.
+    - Si el campo está pendiente de traducción: genera renglones guía ('rayitas') claramente
+      delimitados con altura ampliada (el doble del tamaño estándar para letra grande).
+    """
+    if texto_traducido and str(texto_traducido).strip():
+        return Paragraph(str(texto_traducido).strip(), miskito_style)
+
+    filas = [[Paragraph(f"<i>{prompt_guia}</i>", prompt_style)]]
+    for _ in range(num_lineas):
+        filas.append([''])
+
+    row_heights = [15] + [line_height] * num_lineas
+    t = Table(filas, colWidths=[204], rowHeights=row_heights)
+    t.setStyle(TableStyle([
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('LEFTPADDING', (0, 0), (-1, -1), 2),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 2),
+        ('TOPPADDING', (0, 0), (-1, -1), 0),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 1),
+        ('LINEBELOW', (0, 1), (-1, -1), 0.65, colors.HexColor('#94A3B8')),
+    ]))
+    return t
 
 
 def obtener_estadisticas_traduccion_miskito():
@@ -444,8 +471,8 @@ def generar_pdf_traduccion_miskito(ciudades_ids=None, buffer_destino=None, solo_
         'ContextBody',
         parent=styles['Normal'],
         fontName='Helvetica',
-        fontSize=8.5,
-        leading=11.5,
+        fontSize=7.0,
+        leading=9.3,
         textColor=neutral_dark
     )
 
@@ -518,10 +545,10 @@ def generar_pdf_traduccion_miskito(ciudades_ids=None, buffer_destino=None, solo_
     )
 
     if os.path.exists(logo_path):
-        img = Image(logo_path, width=2.0 * inch, height=0.9 * inch)
+        img = Image(logo_path, width=1.75 * inch, height=0.75 * inch)
         header_table = Table(
-            [[img, Paragraph("<b>Codice路 • Red Nacional de Ciudades Creativas</b><br/>"
-                             "<font size=13 color='#1E3A8A'><b>GUÍA DE TRADUCCIÓN AL IDIOMA MISKITO</b></font><br/>"
+            [[img, Paragraph("<b>Codice Lu • Red Nacional de Ciudades Creativas</b><br/>"
+                             "<font size=13 color='#1E3A8A'><b>GUÍA OFICIAL DE TRADUCCIÓN AL IDIOMA MISKITO</b></font><br/>"
                              f"<font size=8.5 color='#4B5563'>{subtitulo_modo}</font>", title_style)]],
             colWidths=[2.2 * inch, 5.3 * inch]
         )
@@ -533,7 +560,7 @@ def generar_pdf_traduccion_miskito(ciudades_ids=None, buffer_destino=None, solo_
         ]))
         story.append(header_table)
     else:
-        story.append(Paragraph("<b>Codice路 • GUÍA DE TRADUCCIÓN AL IDIOMA MISKITO</b>", title_style))
+        story.append(Paragraph("<b>Codice Lu • GUÍA OFICIAL DE TRADUCCIÓN AL IDIOMA MISKITO</b>", title_style))
         story.append(Paragraph(subtitulo_modo, subtitle_style))
 
     story.append(Spacer(1, 6))
@@ -564,57 +591,66 @@ def generar_pdf_traduccion_miskito(ciudades_ids=None, buffer_destino=None, solo_
         ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor("#F8FAFC")),
         ('BOX', (0, 0), (-1, -1), 1, border_color),
         ('INNERGRID', (0, 0), (-1, -1), 0.5, border_color),
-        ('TOPPADDING', (0, 0), (-1, -1), 5),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
+        ('TOPPADDING', (0, 0), (-1, -1), 3),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
         ('LEFTPADDING', (0, 0), (-1, -1), 8),
         ('RIGHTPADDING', (0, 0), (-1, -1), 8),
     ]))
     story.append(t_resumen)
-    story.append(Spacer(1, 10))
+    story.append(Spacer(1, 5))
 
     # =========================================================================
     # RECUADRO DE CONTEXTO EXPLICATIVO PARA EL TRADUCTOR
     # =========================================================================
     contexto_html = (
-        "<b>¿QUÉ ES CODICE路 Y PARA QUÉ SIRVE ESTE DOCUMENTO?</b><br/>"
-        "Codice路 es la plataforma turística y cultural que conecta a los visitantes con la riqueza patrimonial, "
-        "artística, artesanal y creativa de los municipios de Nicaragua. Nuestro objetivo con esta traducción es "
-        "garantizar que la población hablante del <b>idioma Miskito (Miskitu)</b> y los visitantes de la Costa Caribe "
-        "puedan disfrutar plenamente de la información turística en su propia lengua originaria.<br/><br/>"
+        "<b>¿QUÉ ES LA PLATAFORMA CODICE (CODICE LU) Y CUÁL ES EL OBJETIVO DE ESTE DOCUMENTO?</b><br/>"
+        "<b>Codice Lu</b> (cuya identidad visual integra el ideograma de ruta o camino) es la plataforma tecnológica oficial "
+        "diseñada para articular, georreferenciar y difundir la riqueza patrimonial, cultural, artística, tradicional y productiva de la "
+        "<b>Red Nacional de Ciudades Creativas de Nicaragua</b> (Estelí, León, Managua, Granada, Masaya, Nagarote, "
+        "San Juan de Oriente, Juigalpa, Matagalpa y Bluefields). Mediante mapas interactivos, circuitos temáticos y una aplicación "
+        "móvil comunitaria, Codice orienta a los visitantes en el reconocimiento de nuestros destinos e identidades creativas.<br/><br/>"
+        "<b>OBJETIVO DE LA TRADUCCIÓN AL IDIOMA MISKITO (MISKITU BIL):</b><br/>"
+        "Nicaragua es un país multiétnico, multicultural y multilingüe. El idioma <b>Miskito (Miskitu)</b> es la lengua originaria "
+        "más hablada en la Costa Caribe nicaragüense (RACCN y RACCS). El objetivo primordial de esta traducción es garantizar la "
+        "<b>inclusión lingüística y el acceso intercultural</b>, permitiendo que la población, familias y estudiantes hablantes de "
+        "Miskito puedan disfrutar plenamente de la información turística y cultural en su propia lengua originaria, al mismo tiempo que se "
+        "apoya la preservación digital, dignificación y revitalización del patrimonio lingüístico ancestral frente a las nuevas tecnologías.<br/><br/>"
         "<b>ESTRUCTURA Y SIGNIFICADO DE CADA ELEMENTO:</b><br/>"
-        "• <b>Ciudad (Municipio):</b> Es el territorio principal. Su descripción presenta la identidad global, su historia "
-        "y vocación cultural (ciudades creativas). <i>Se han excluido del documento las ciudades que no cuentan con circuitos creativos.</i><br/>"
-        "• <b>Circuito Creativo (Ruta Temática):</b> Recorrido turístico planificado (a pie o vehicular) que agrupa "
-        "atractivos culturales, murales, gastronomía o tradiciones dentro de la ciudad.<br/>"
-        "• <b>Punto de Interés (Parada o Hito):</b> Cada una de las estaciones que componen el circuito (taller artesanal, "
-        "monumento, museo, mirador o gastronomía típica). Se indica el orden y la categoría.<br/>"
-        "• <b>Dato Histórico / Tradición:</b> Relatos, mitos, leyendas o saberes populares asociados a cada sitio.<br/>"
-        "• <b>Evento / Festividad Cultural:</b> Fiestas patronales, festivales tradicionales, celebraciones religiosas y culturales "
-        "(ej. La Gritería, Alfombras Pasionarias, festivales del tabaco o patronales). Incluye nombre, fechas y contexto.<br/><br/>"
-        "<b>GUÍA PARA EL TRADUCTOR:</b><br/>"
-        "1. <b>Filtro de Contenidos:</b> Este documento solo muestra los textos que <b>aún no han sido traducidos</b> al Miskito.<br/>"
-        "2. Traduzca el texto en español respetando el sentido cultural. Los nombres propios (ej. 'Sutiaba', 'Monimbó') "
-        "se pueden conservar o adaptar según la fonética del Miskito.<br/>"
-        "3. Escriba en el espacio <b>'Traducción al Miskito / Miskitu bil'</b>.<br/>"
-        "4. Cada elemento incluye un código único <b>[REF: ...]</b> indispensable para registrar la traducción en la base de datos sin equivocación."
+        "• <b>Ciudad (Municipio):</b> Territorio sede de la Red de Ciudades Creativas. Su descripción presenta la identidad general, historia "
+        "y vocación cultural. <i>(Se han excluido de este documento las ciudades que no cuentan con circuitos creativos registrados).</i><br/>"
+        "• <b>Circuito Creativo (Ruta Temática):</b> Recorrido turístico planificado (peatonal o vehicular) que articula atractivos vinculados "
+        "a murales, gastronomía tradicional, talleres artesanales o arquitectura.<br/>"
+        "• <b>Punto de Interés (Parada o Hito):</b> Estaciones individuales que integran el circuito (museos, talleres, monumentos, "
+        "miradores). Cada hito incluye su número de parada y categoría.<br/>"
+        "• <b>Dato Histórico / Tradición:</b> Leyendas, crónicas, saberes populares o mitos tradicionales que otorgan valor inmaterial a cada sitio.<br/>"
+        "• <b>Evento / Festividad Cultural:</b> Fiestas patronales, expresiones religiosas tradicionales y festivales folclóricos o artesanales "
+        "(ej. La Gritería, Alfombras Pasionarias, festivales patronales). Incluye nombre, fechas y contexto.<br/><br/>"
+        "<b>INSTRUCCIONES CLAVE PARA EL EQUIPO TRADUCTOR:</b><br/>"
+        "1. <b>Filtro de Contenidos:</b> Este documento recopila únicamente aquellos textos que <b>aún no disponen de traducción registrada</b> en el sistema.<br/>"
+        "2. <b>Fidelidad y Contexto Cultural:</b> Traduzca respetando el sentido cultural de la comunidad. Los nombres propios y topónimos "
+        "(ej. 'Sutiaba', 'Monimbó', 'Tiscapa') se pueden conservar o adaptar según la fonética del Miskito.<br/>"
+        "3. <b>Renglones de Escritura Ampliada:</b> Escriba la traducción directamente sobre las líneas guía de la columna <i>'Traducción al Miskito (Miskitu bil)'</i>, "
+        "diseñadas con el doble de espacio vertical para permitir una caligrafía amplia y clara.<br/>"
+        "4. <b>Código Técnico de Referencia [REF: ...]:</b> Cada elemento posee un código identificador único (ej. <i>[REF: CIUDAD:14:nombre_miq]</i>), "
+        "indispensable para registrar cada texto con absoluta precisión en la base de datos central sin margen de confusión."
     )
 
     t_contexto = Table([[Paragraph(contexto_html, context_body_style)]], colWidths=[540])
     t_contexto.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor("#EFF6FF")),
         ('BOX', (0, 0), (-1, -1), 1.2, colors.HexColor("#3B82F6")),
-        ('TOPPADDING', (0, 0), (-1, -1), 8),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
-        ('LEFTPADDING', (0, 0), (-1, -1), 10),
-        ('RIGHTPADDING', (0, 0), (-1, -1), 10),
+        ('TOPPADDING', (0, 0), (-1, -1), 3),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
+        ('LEFTPADDING', (0, 0), (-1, -1), 8),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 8),
     ]))
     story.append(t_contexto)
-    story.append(Spacer(1, 10))
+    story.append(Spacer(1, 4))
 
     # CASO ESPECIAL: Todo el contenido ya está traducido
     if len(ciudades_procesadas) == 0 and len(eventos_generales_items) == 0:
         completado_html = (
-            "<font size=16 color='#047857'><b>🎉 ¡FELICIDADES! TRADUCCIÓN AL MISKITO COMPLETADA</b></font><br/><br/>"
+            "<font size=16 color='#047857'><b>TRADUCCIÓN AL MISKITO COMPLETADA</b></font><br/><br/>"
             "<font size=11 color='#1F2937'>No se encontraron textos pendientes de traducción en las ciudades con circuitos creativos ni eventos.<br/>"
             "Todos los nombres, descripciones, festividades y puntos de interés ya cuentan con su equivalente en idioma Miskito (Miskitu bil).<br/><br/>"
             "Si deseas descargar la guía completa con todos los contenidos traducidos como respaldo o revisión, "
@@ -704,7 +740,7 @@ def generar_pdf_traduccion_miskito(ciudades_ids=None, buffer_destino=None, solo_
         # Banner de Ciudad
         banner_ciudad = Table(
             [[
-                Paragraph(f"<font size=13 color='white'><b>🏛️ CIUDAD: {ciudad.nombre.upper()}</b></font>", table_header_style),
+                Paragraph(f"<font size=12 color='white'><b>CIUDAD: {ciudad.nombre.upper()}</b></font>", table_header_style),
                 Paragraph(f"<font size=8.5 color='#E0E7FF'><b>{len(c_info['circuitos'])} Circuitos con pendientes</b> • ID Sistema #{ciudad.id}</font>", ParagraphStyle('R', parent=table_header_style, alignment=2))
             ]],
             colWidths=[330, 210]
@@ -735,28 +771,31 @@ def generar_pdf_traduccion_miskito(ciudades_ids=None, buffer_destino=None, solo_
                           f"<font size=6.5 color='#92400E'>Título del municipio</font><br/>"
                           f"{'<font size=6.5 color=\"#DC2626\">● Pendiente</font>' if c_info['nombre_pendiente'] else '<font size=6.5 color=\"#059669\">✓ Traducido</font>'}", col_meta_style),
                 Paragraph(f"<b>{ciudad.nombre}</b>", col_spanish_style),
-                Paragraph(ciudad.nombre_miq if ciudad.nombre_miq else "<font color='#9CA3AF'>[ Escribir nombre en Miskito ]</font><br/><br/>________________________________________", col_miskito_style if ciudad.nombre_miq else col_write_prompt_style)
+                crear_bloque_escritura_miskito(ciudad.nombre_miq, "[ Escribir nombre en Miskito ]", num_lineas=3, line_height=23, prompt_style=col_write_prompt_style, miskito_style=col_miskito_style)
             ])
 
         if not solo_pendientes or c_info['descripcion_pendiente']:
+            lineas_desc = 7 if (ciudad.descripcion and len(ciudad.descripcion) > 220) else 6
             filas_ciudad.append([
                 Paragraph(f"<b>Descripción Cultural</b><br/>"
                           f"<font size=7 color='#6B7280'>[REF: CIUDAD:{ciudad.id}:descripcion_miq]</font><br/>"
                           f"<font size=6.5 color='#92400E'>Resumen general cultural</font><br/>"
                           f"{'<font size=6.5 color=\"#DC2626\">● Pendiente</font>' if c_info['descripcion_pendiente'] else '<font size=6.5 color=\"#059669\">✓ Traducido</font>'}", col_meta_style),
                 Paragraph(ciudad.descripcion or "<i>Sin descripción registrada</i>", col_spanish_style),
-                Paragraph(ciudad.descripcion_miq if ciudad.descripcion_miq else "<font color='#9CA3AF'>[ Escribir traducción al Miskito de la descripción ]</font><br/><br/><br/><br/>________________________________________<br/>________________________________________", col_miskito_style if ciudad.descripcion_miq else col_write_prompt_style)
+                crear_bloque_escritura_miskito(ciudad.descripcion_miq, "[ Escribir traducción al Miskito de la descripción ]", num_lineas=lineas_desc, line_height=22, prompt_style=col_write_prompt_style, miskito_style=col_miskito_style)
             ])
 
         # Datos Históricos generales de la ciudad
         for dh_dict in c_info['datos_historicos']:
             dh = dh_dict['objeto']
+            traduccion_dh = (dh.titulo_miq + "<br/>" + dh.contenido_miq) if (dh.titulo_miq and dh.contenido_miq) else (dh.contenido_miq or dh.titulo_miq)
+            lineas_dh = 7 if (dh.contenido and len(dh.contenido) > 220) else 6
             filas_ciudad.append([
                 Paragraph(f"<b>Dato Histórico / Leyenda</b><br/>"
                           f"<font size=7 color='#6B7280'>[REF: DATO:{dh.id}:titulo_miq & contenido_miq]</font><br/>"
                           f"<font size=6.5 color='#92400E'>Tipo: {dh.tipo}</font>", col_meta_style),
                 Paragraph(f"<b>{dh.titulo}</b> ({dh.epoca_o_ano or 'Histórico'}):<br/>{dh.contenido}", col_spanish_style),
-                Paragraph((dh.titulo_miq + "<br/>" + dh.contenido_miq) if (dh.titulo_miq and dh.contenido_miq) else "<font color='#9CA3AF'>[ Traducción de título e historia al Miskito ]</font><br/><br/><br/>________________________________________", col_miskito_style if dh.titulo_miq else col_write_prompt_style)
+                crear_bloque_escritura_miskito(traduccion_dh, "[ Traducción de título e historia al Miskito ]", num_lineas=lineas_dh, line_height=22, prompt_style=col_write_prompt_style, miskito_style=col_miskito_style)
             ])
 
         if len(filas_ciudad) > 1:
@@ -787,7 +826,7 @@ def generar_pdf_traduccion_miskito(ciudades_ids=None, buffer_destino=None, solo_
             story.append(Spacer(1, 4))
             banner_eventos = Table(
                 [[
-                    Paragraph(f"<font size=10 color='white'><b>🎉 EVENTOS Y FESTIVIDADES CULTURALES ({len(eventos_ciudad)} pendiente(s))</b></font>", table_header_style),
+                    Paragraph(f"<font size=10 color='white'><b>EVENTOS Y FESTIVIDADES CULTURALES ({len(eventos_ciudad)} pendiente(s))</b></font>", table_header_style),
                     Paragraph(f"<font size=8 color='#DDD6FE'>Festividades de {ciudad.nombre}</font>", ParagraphStyle('EVR', parent=table_header_style, alignment=2))
                 ]],
                 colWidths=[340, 200]
@@ -819,7 +858,7 @@ def generar_pdf_traduccion_miskito(ciudades_ids=None, buffer_destino=None, solo_
                                   f"<font size=6.5 color='#6D28D9'>Festividad cultural</font><br/>"
                                   f"{'<font size=6.5 color=\"#DC2626\">● Pendiente</font>' if ev_info['titulo_pendiente'] else '<font size=6.5 color=\"#059669\">✓ Traducido</font>'}", col_meta_style),
                         Paragraph(f"<b>{ev.titulo}</b>", col_spanish_style),
-                        Paragraph(ev.titulo_miq if ev.titulo_miq else "<font color='#9CA3AF'>[ Escribir nombre del evento en Miskito ]</font><br/><br/>________________________________________", col_miskito_style if ev.titulo_miq else col_write_prompt_style)
+                        crear_bloque_escritura_miskito(ev.titulo_miq, "[ Escribir nombre del evento en Miskito ]", num_lineas=3, line_height=23, prompt_style=col_write_prompt_style, miskito_style=col_miskito_style)
                     ])
 
                 if ev.rango_celebracion and (not solo_pendientes or ev_info['rango_pendiente']):
@@ -829,17 +868,18 @@ def generar_pdf_traduccion_miskito(ciudades_ids=None, buffer_destino=None, solo_
                                   f"<font size=6.5 color='#6D28D9'>Período tradicional de celebración</font><br/>"
                                   f"{'<font size=6.5 color=\"#DC2626\">● Pendiente</font>' if ev_info['rango_pendiente'] else '<font size=6.5 color=\"#059669\">✓ Traducido</font>'}", col_meta_style),
                         Paragraph(f"{ev.rango_celebracion}", col_spanish_style),
-                        Paragraph(ev.rango_celebracion_miq if ev.rango_celebracion_miq else "<font color='#9CA3AF'>[ Escribir rango/fecha en Miskito ]</font><br/>________________________________________", col_miskito_style if ev.rango_celebracion_miq else col_write_prompt_style)
+                        crear_bloque_escritura_miskito(ev.rango_celebracion_miq, "[ Escribir rango/fecha en Miskito ]", num_lineas=2, line_height=23, prompt_style=col_write_prompt_style, miskito_style=col_miskito_style)
                     ])
 
                 if not solo_pendientes or ev_info['descripcion_pendiente']:
+                    lineas_ev = 7 if (ev.descripcion and len(ev.descripcion) > 220) else 6
                     filas_evento.append([
                         Paragraph(f"<b>Descripción del Evento</b><br/>"
                                   f"<font size=7 color='#6B7280'>[REF: EVENTO:{ev.id}:descripcion_miq]</font><br/>"
                                   f"<font size=6.5 color='#6D28D9'>Contexto de la festividad</font><br/>"
                                   f"{'<font size=6.5 color=\"#DC2626\">● Pendiente</font>' if ev_info['descripcion_pendiente'] else '<font size=6.5 color=\"#059669\">✓ Traducido</font>'}", col_meta_style),
                         Paragraph(ev.descripcion or "<i>Sin descripción</i>", col_spanish_style),
-                        Paragraph(ev.descripcion_miq if ev.descripcion_miq else "<font color='#9CA3AF'>[ Escribir traducción al Miskito de la festividad ]</font><br/><br/><br/>________________________________________<br/>________________________________________", col_miskito_style if ev.descripcion_miq else col_write_prompt_style)
+                        crear_bloque_escritura_miskito(ev.descripcion_miq, "[ Escribir traducción al Miskito de la festividad ]", num_lineas=lineas_ev, line_height=22, prompt_style=col_write_prompt_style, miskito_style=col_miskito_style)
                     ])
 
                 if len(filas_evento) > 1:
@@ -869,7 +909,7 @@ def generar_pdf_traduccion_miskito(ciudades_ids=None, buffer_destino=None, solo_
             # Banner Circuito
             banner_circuito = Table(
                 [[
-                    Paragraph(f"<font size=10 color='white'><b>🧭 CIRCUITO CREATIVO: {circuito.nombre.upper()}</b></font>", table_header_style),
+                    Paragraph(f"<font size=10 color='white'><b>CIRCUITO CREATIVO: {circuito.nombre.upper()}</b></font>", table_header_style),
                     Paragraph(f"<font size=8 color='#FEF3C7'>Dificultad: {circuito.dificultad} • {circuito.distancia_km} km • {circuito.duracion_estimada} • ID #{circuito.id}</font>", ParagraphStyle('CR', parent=table_header_style, alignment=2))
                 ]],
                 colWidths=[320, 220]
@@ -899,17 +939,18 @@ def generar_pdf_traduccion_miskito(ciudades_ids=None, buffer_destino=None, solo_
                               f"<font size=6.5 color='#92400E'>Nombre oficial del recorrido</font><br/>"
                               f"{'<font size=6.5 color=\"#DC2626\">● Pendiente</font>' if cir_info['nombre_pendiente'] else '<font size=6.5 color=\"#059669\">✓ Traducido</font>'}", col_meta_style),
                     Paragraph(f"<b>{circuito.nombre}</b>", col_spanish_style),
-                    Paragraph(circuito.nombre_miq if circuito.nombre_miq else "<font color='#9CA3AF'>[ Escribir nombre del circuito en Miskito ]</font><br/><br/>________________________________________", col_miskito_style if circuito.nombre_miq else col_write_prompt_style)
+                    crear_bloque_escritura_miskito(circuito.nombre_miq, "[ Escribir nombre del circuito en Miskito ]", num_lineas=3, line_height=23, prompt_style=col_write_prompt_style, miskito_style=col_miskito_style)
                 ])
 
             if not solo_pendientes or cir_info['descripcion_pendiente']:
+                lineas_cir = 7 if (circuito.descripcion and len(circuito.descripcion) > 220) else 6
                 filas_circuito.append([
                     Paragraph(f"<b>Descripción del Recorrido</b><br/>"
                               f"<font size=7 color='#6B7280'>[REF: CIRCUITO:{circuito.id}:descripcion_miq]</font><br/>"
                               f"<font size=6.5 color='#92400E'>Contexto temático de la ruta</font><br/>"
                               f"{'<font size=6.5 color=\"#DC2626\">● Pendiente</font>' if cir_info['descripcion_pendiente'] else '<font size=6.5 color=\"#059669\">✓ Traducido</font>'}", col_meta_style),
                     Paragraph(circuito.descripcion or "<i>Sin descripción</i>", col_spanish_style),
-                    Paragraph(circuito.descripcion_miq if circuito.descripcion_miq else "<font color='#9CA3AF'>[ Escribir descripción del circuito en Miskito ]</font><br/><br/><br/>________________________________________<br/>________________________________________", col_miskito_style if circuito.descripcion_miq else col_write_prompt_style)
+                    crear_bloque_escritura_miskito(circuito.descripcion_miq, "[ Escribir descripción del circuito en Miskito ]", num_lineas=lineas_cir, line_height=22, prompt_style=col_write_prompt_style, miskito_style=col_miskito_style)
                 ])
 
             if len(filas_circuito) > 1:
@@ -946,27 +987,30 @@ def generar_pdf_traduccion_miskito(ciudades_ids=None, buffer_destino=None, solo_
                                       f"<font size=7 color='#6B7280'>Categoría: {p.get_tipo_display()}<br/>[REF: PUNTO:{p.id}:nombre_miq]</font><br/>"
                                       f"{'<font size=6.5 color=\"#DC2626\">● Nombre pendiente</font>' if p_info['nombre_pendiente'] else '<font size=6.5 color=\"#059669\">✓ Traducido</font>'}", col_meta_style),
                             Paragraph(f"<b>{p.nombre}</b>", col_spanish_style),
-                            Paragraph(p.nombre_miq if p.nombre_miq else "<font color='#9CA3AF'>[ Nombre del punto en Miskito ]</font><br/>________________________________________", col_miskito_style if p.nombre_miq else col_write_prompt_style)
+                            crear_bloque_escritura_miskito(p.nombre_miq, "[ Nombre del punto en Miskito ]", num_lineas=3, line_height=23, prompt_style=col_write_prompt_style, miskito_style=col_miskito_style)
                         ])
 
                     if not solo_pendientes or p_info['descripcion_pendiente']:
+                        lineas_p = 7 if (p.descripcion and len(p.descripcion) > 220) else 6
                         filas_punto.append([
                             Paragraph(f"<b>Descripción del Atractivo</b><br/>"
                                       f"<font size=7 color='#6B7280'>[REF: PUNTO:{p.id}:descripcion_miq]</font><br/>"
                                       f"<font size=6.5 color='#0F766E'>Explicación de qué se hace o aprecia aquí</font><br/>"
                                       f"{'<font size=6.5 color=\"#DC2626\">● Descripción pendiente</font>' if p_info['descripcion_pendiente'] else '<font size=6.5 color=\"#059669\">✓ Traducido</font>'}", col_meta_style),
                             Paragraph(p.descripcion or "<i>Sin descripción</i>", col_spanish_style),
-                            Paragraph(p.descripcion_miq if p.descripcion_miq else "<font color='#9CA3AF'>[ Traducción al Miskito del atractivo y actividades ]</font><br/><br/><br/>________________________________________<br/>________________________________________", col_miskito_style if p.descripcion_miq else col_write_prompt_style)
+                            crear_bloque_escritura_miskito(p.descripcion_miq, "[ Traducción al Miskito del atractivo y actividades ]", num_lineas=lineas_p, line_height=22, prompt_style=col_write_prompt_style, miskito_style=col_miskito_style)
                         ])
 
                     # Datos históricos del punto
                     for dh_p_dict in p_info['datos_historicos']:
                         dh_p = dh_p_dict['objeto']
+                        traduccion_dhp = (dh_p.titulo_miq + "<br/>" + dh_p.contenido_miq) if (dh_p.titulo_miq and dh_p.contenido_miq) else (dh_p.contenido_miq or dh_p.titulo_miq)
+                        lineas_dhp = 7 if (dh_p.contenido and len(dh_p.contenido) > 220) else 6
                         filas_punto.append([
                             Paragraph(f"<b>Dato / Tradición</b><br/>"
                                       f"<font size=7 color='#6B7280'>[REF: DATO:{dh_p.id}:titulo_miq & contenido_miq]<br/>Tipo: {dh_p.tipo}</font>", col_meta_style),
                             Paragraph(f"<b>{dh_p.titulo}</b>:<br/>{dh_p.contenido}", col_spanish_style),
-                            Paragraph((dh_p.titulo_miq + "<br/>" + dh_p.contenido_miq) if (dh_p.titulo_miq and dh_p.contenido_miq) else "<font color='#9CA3AF'>[ Traducción de leyenda o tradición al Miskito ]</font><br/><br/>________________________________________", col_miskito_style if dh_p.titulo_miq else col_write_prompt_style)
+                            crear_bloque_escritura_miskito(traduccion_dhp, "[ Traducción de leyenda o tradición al Miskito ]", num_lineas=lineas_dhp, line_height=22, prompt_style=col_write_prompt_style, miskito_style=col_miskito_style)
                         ])
 
                     if len(filas_punto) > 0:
@@ -996,7 +1040,7 @@ def generar_pdf_traduccion_miskito(ciudades_ids=None, buffer_destino=None, solo_
 
         banner_gral = Table(
             [[
-                Paragraph("<font size=13 color='white'><b>🎉 EVENTOS Y FESTIVIDADES NACIONALES / GENERALES</b></font>", table_header_style),
+                Paragraph("<font size=12 color='white'><b>EVENTOS Y FESTIVIDADES NACIONALES / GENERALES</b></font>", table_header_style),
                 Paragraph(f"<font size=8.5 color='#DDD6FE'><b>{len(eventos_generales_items)} Eventos con pendientes</b></font>", ParagraphStyle('EVGR', parent=table_header_style, alignment=2))
             ]],
             colWidths=[350, 190]
@@ -1027,7 +1071,7 @@ def generar_pdf_traduccion_miskito(ciudades_ids=None, buffer_destino=None, solo_
                               f"<font size=6.5 color='#6D28D9'>Festividad nacional o general</font><br/>"
                               f"{'<font size=6.5 color=\"#DC2626\">● Pendiente</font>' if ev_g_info['titulo_pendiente'] else '<font size=6.5 color=\"#059669\">✓ Traducido</font>'}", col_meta_style),
                     Paragraph(f"<b>{ev.titulo}</b>", col_spanish_style),
-                    Paragraph(ev.titulo_miq if ev.titulo_miq else "<font color='#9CA3AF'>[ Escribir nombre del evento en Miskito ]</font><br/><br/>________________________________________", col_miskito_style if ev.titulo_miq else col_write_prompt_style)
+                    crear_bloque_escritura_miskito(ev.titulo_miq, "[ Escribir nombre del evento en Miskito ]", num_lineas=3, line_height=23, prompt_style=col_write_prompt_style, miskito_style=col_miskito_style)
                 ])
             if ev.rango_celebracion and (not solo_pendientes or ev_g_info['rango_pendiente']):
                 filas_ev_g.append([
@@ -1036,16 +1080,17 @@ def generar_pdf_traduccion_miskito(ciudades_ids=None, buffer_destino=None, solo_
                               f"<font size=6.5 color='#6D28D9'>Período tradicional de celebración</font><br/>"
                               f"{'<font size=6.5 color=\"#DC2626\">● Pendiente</font>' if ev_g_info['rango_pendiente'] else '<font size=6.5 color=\"#059669\">✓ Traducido</font>'}", col_meta_style),
                     Paragraph(f"{ev.rango_celebracion}", col_spanish_style),
-                    Paragraph(ev.rango_celebracion_miq if ev.rango_celebracion_miq else "<font color='#9CA3AF'>[ Escribir rango/fecha en Miskito ]</font><br/>________________________________________", col_miskito_style if ev.rango_celebracion_miq else col_write_prompt_style)
+                    crear_bloque_escritura_miskito(ev.rango_celebracion_miq, "[ Escribir rango/fecha en Miskito ]", num_lineas=2, line_height=23, prompt_style=col_write_prompt_style, miskito_style=col_miskito_style)
                 ])
             if not solo_pendientes or ev_g_info['descripcion_pendiente']:
+                lineas_evg = 7 if (ev.descripcion and len(ev.descripcion) > 220) else 6
                 filas_ev_g.append([
                     Paragraph(f"<b>Descripción del Evento</b><br/>"
                               f"<font size=7 color='#6B7280'>[REF: EVENTO:{ev.id}:descripcion_miq]</font><br/>"
                               f"<font size=6.5 color='#6D28D9'>Contexto de la festividad</font><br/>"
                               f"{'<font size=6.5 color=\"#DC2626\">● Pendiente</font>' if ev_g_info['descripcion_pendiente'] else '<font size=6.5 color=\"#059669\">✓ Traducido</font>'}", col_meta_style),
                     Paragraph(ev.descripcion or "<i>Sin descripción</i>", col_spanish_style),
-                    Paragraph(ev.descripcion_miq if ev.descripcion_miq else "<font color='#9CA3AF'>[ Escribir traducción al Miskito de la festividad ]</font><br/><br/><br/>________________________________________<br/>________________________________________", col_miskito_style if ev.descripcion_miq else col_write_prompt_style)
+                    crear_bloque_escritura_miskito(ev.descripcion_miq, "[ Escribir traducción al Miskito de la festividad ]", num_lineas=lineas_evg, line_height=22, prompt_style=col_write_prompt_style, miskito_style=col_miskito_style)
                 ])
 
             if len(filas_ev_g) > 1:
