@@ -21,7 +21,7 @@ from reportlab.platypus import (
 )
 from reportlab.pdfgen import canvas
 
-from .models import Ciudad, CircuitoCreativo, PuntoInteres, DatoHistorico
+from .models import Ciudad, CircuitoCreativo, PuntoInteres, DatoHistorico, Evento
 
 
 class NumberedCanvas(canvas.Canvas):
@@ -83,6 +83,7 @@ def obtener_estadisticas_traduccion_miskito():
         Prefetch('circuitos', queryset=CircuitoCreativo.objects.prefetch_related(
             Prefetch('puntos_interes', queryset=PuntoInteres.objects.prefetch_related('datos_historicos'))
         )),
+        Prefetch('eventos', queryset=Evento.objects.filter(esta_activo=True).order_by('fecha_inicio')),
         'datos_historicos'
     )
 
@@ -91,6 +92,7 @@ def obtener_estadisticas_traduccion_miskito():
     ciudades_pendientes = 0
     circuitos_pendientes = 0
     puntos_pendientes = 0
+    eventos_pendientes = 0
 
     for c in ciudades:
         c_tiene_pend = False
@@ -110,6 +112,24 @@ def obtener_estadisticas_traduccion_miskito():
                 c_tiene_pend = True
             if not tiene_traduccion(dh.contenido_miq):
                 campos_pendientes += 1
+                c_tiene_pend = True
+
+        for ev in c.eventos.all():
+            ev_tiene_pend = False
+            total_campos += 2
+            if not tiene_traduccion(ev.titulo_miq):
+                campos_pendientes += 1
+                ev_tiene_pend = True
+            if not tiene_traduccion(ev.descripcion_miq):
+                campos_pendientes += 1
+                ev_tiene_pend = True
+            if ev.rango_celebracion:
+                total_campos += 1
+                if not tiene_traduccion(ev.rango_celebracion_miq):
+                    campos_pendientes += 1
+                    ev_tiene_pend = True
+            if ev_tiene_pend:
+                eventos_pendientes += 1
                 c_tiene_pend = True
 
         for cir in c.circuitos.all():
@@ -157,6 +177,7 @@ def obtener_estadisticas_traduccion_miskito():
         'ciudades_pendientes': ciudades_pendientes,
         'circuitos_pendientes': circuitos_pendientes,
         'puntos_pendientes': puntos_pendientes,
+        'eventos_pendientes': eventos_pendientes,
         'total_campos': total_campos,
         'campos_pendientes': campos_pendientes,
         'campos_traducidos': total_campos - campos_pendientes,
@@ -167,16 +188,15 @@ def obtener_estadisticas_traduccion_miskito():
 def generar_pdf_traduccion_miskito(ciudades_ids=None, buffer_destino=None, solo_pendientes: bool = True) -> io.BytesIO:
     """
     Genera un documento PDF estructurado y visualmente claro para que traductores
-    puedan traducir los contenidos de Ciudades, Circuitos Creativos y Puntos de Interés
-    al idioma Miskito (Miskitu).
+    puedan traducir los contenidos de Ciudades, Circuitos Creativos, Puntos de Interés
+    y Eventos Culturales al idioma Miskito (Miskitu).
 
     Reglas de negocio aplicadas:
     - Excluye ciudades que no tengan circuitos creativos.
+    - Incluye eventos culturales de las ciudades seleccionadas y eventos generales.
     - Si solo_pendientes=True (por defecto):
       * Omite campos que ya posean traducción al Miskito.
-      * Omite puntos de interés que ya estén completamente traducidos.
-      * Omite circuitos creativos que ya estén completamente traducidos.
-      * Omite ciudades que ya estén completamente traducidas.
+      * Omite puntos, circuitos, eventos y ciudades que ya estén completamente traducidos.
     - Proporciona contexto cultural, explicación de cada elemento y su función.
     - Incluye identificadores de referencia [REF] para facilitar la carga posterior al sistema.
     """
@@ -197,6 +217,10 @@ def generar_pdf_traduccion_miskito(ciudades_ids=None, buffer_destino=None, solo_
                     queryset=PuntoInteres.objects.prefetch_related('datos_historicos').order_by('orden')
                 )
             ).order_by('nombre')
+        ),
+        Prefetch(
+            'eventos',
+            queryset=Evento.objects.filter(esta_activo=True).order_by('fecha_inicio')
         ),
         'datos_historicos'
     ).order_by('nombre')
@@ -298,14 +322,70 @@ def generar_pdf_traduccion_miskito(ciudades_ids=None, buffer_destino=None, solo_
                     'puntos': puntos_items
                 })
 
-        c_tiene_pendientes = c_nombre_pend or c_desc_pend or len(dh_ciudad_items) > 0 or len(circuitos_items) > 0
+        eventos_items = []
+        for ev in ciudad.eventos.all():
+            ev_tit_pend = not tiene_traduccion(ev.titulo_miq)
+            ev_desc_pend = not tiene_traduccion(ev.descripcion_miq)
+            ev_rango_pend = bool(ev.rango_celebracion and not tiene_traduccion(ev.rango_celebracion_miq))
+
+            if ev_tit_pend: conteo_campos_pendientes += 1
+            else: conteo_campos_omitidos += 1
+
+            if ev_desc_pend: conteo_campos_pendientes += 1
+            else: conteo_campos_omitidos += 1
+
+            if ev.rango_celebracion:
+                if ev_rango_pend: conteo_campos_pendientes += 1
+                else: conteo_campos_omitidos += 1
+
+            ev_tiene_pend = ev_tit_pend or ev_desc_pend or ev_rango_pend
+            if not solo_pendientes or ev_tiene_pend:
+                eventos_items.append({
+                    'objeto': ev,
+                    'titulo_pendiente': ev_tit_pend,
+                    'descripcion_pendiente': ev_desc_pend,
+                    'rango_pendiente': ev_rango_pend
+                })
+
+        c_tiene_pendientes = (
+            c_nombre_pend or c_desc_pend or
+            len(dh_ciudad_items) > 0 or
+            len(circuitos_items) > 0 or
+            len(eventos_items) > 0
+        )
         if not solo_pendientes or c_tiene_pendientes:
             ciudades_procesadas.append({
                 'objeto': ciudad,
                 'nombre_pendiente': c_nombre_pend,
                 'descripcion_pendiente': c_desc_pend,
                 'datos_historicos': dh_ciudad_items,
-                'circuitos': circuitos_items
+                'circuitos': circuitos_items,
+                'eventos': eventos_items
+            })
+
+    # Procesar eventos generales que no pertenecen a una ciudad específica
+    eventos_generales_items = []
+    for ev_g in Evento.objects.filter(ciudad__isnull=True, esta_activo=True).order_by('fecha_inicio'):
+        ev_g_tit_pend = not tiene_traduccion(ev_g.titulo_miq)
+        ev_g_desc_pend = not tiene_traduccion(ev_g.descripcion_miq)
+        ev_g_rango_pend = bool(ev_g.rango_celebracion and not tiene_traduccion(ev_g.rango_celebracion_miq))
+
+        if ev_g_tit_pend: conteo_campos_pendientes += 1
+        else: conteo_campos_omitidos += 1
+
+        if ev_g_desc_pend: conteo_campos_pendientes += 1
+        else: conteo_campos_omitidos += 1
+
+        if ev_g.rango_celebracion:
+            if ev_g_rango_pend: conteo_campos_pendientes += 1
+            else: conteo_campos_omitidos += 1
+
+        if not solo_pendientes or (ev_g_tit_pend or ev_g_desc_pend or ev_g_rango_pend):
+            eventos_generales_items.append({
+                'objeto': ev_g,
+                'titulo_pendiente': ev_g_tit_pend,
+                'descripcion_pendiente': ev_g_desc_pend,
+                'rango_pendiente': ev_g_rango_pend
             })
 
     # Configuración de página
@@ -324,6 +404,7 @@ def generar_pdf_traduccion_miskito(ciudades_ids=None, buffer_destino=None, solo_
     # Definir paleta de estilos tipográficos
     primary_color = colors.HexColor("#1E3A8A")     # Azul institucional Codice
     secondary_color = colors.HexColor("#92400E")   # Dorado/Ámbar cultural
+    event_color = colors.HexColor("#6D28D9")       # Púrpura festivo / celebraciones y tradiciones
     neutral_dark = colors.HexColor("#1F2937")      # Gris oscuro para lectura
     neutral_light = colors.HexColor("#F3F4F6")     # Fondo suave
     border_color = colors.HexColor("#D1D5DB")
@@ -461,20 +542,21 @@ def generar_pdf_traduccion_miskito(ciudades_ids=None, buffer_destino=None, solo_
     # Resumen y métricas de pendientes
     total_cir_pend = sum(len(c['circuitos']) for c in ciudades_procesadas)
     total_pts_pend = sum(sum(len(cir['puntos']) for cir in c['circuitos']) for c in ciudades_procesadas)
+    total_ev_pend = sum(len(c.get('eventos', [])) for c in ciudades_procesadas) + len(eventos_generales_items)
     fecha_hoy = datetime.now().strftime("%d de %B de %Y")
 
     resumen_data = [
         [
             Paragraph(f"<b>Fecha:</b> {fecha_hoy}", context_body_style),
-            Paragraph(f"<b>Ciudades con pendientes:</b> {len(ciudades_procesadas)}", context_body_style),
-            Paragraph(f"<b>Circuitos con pendientes:</b> {total_cir_pend}", context_body_style),
-            Paragraph(f"<b>Puntos con pendientes:</b> {total_pts_pend}", context_body_style),
+            Paragraph(f"<b>Ciudades:</b> {len(ciudades_procesadas)}", context_body_style),
+            Paragraph(f"<b>Circuitos:</b> {total_cir_pend}", context_body_style),
+            Paragraph(f"<b>Paradas:</b> {total_pts_pend}", context_body_style),
         ],
         [
+            Paragraph(f"<b>Eventos / Fiestas:</b> {total_ev_pend}", context_body_style),
             Paragraph(f"<b>Filtro activo:</b> {'Solo pendientes' if solo_pendientes else 'Todos'}", context_body_style),
-            Paragraph(f"<b>Campos por traducir:</b> <font color='#DC2626'><b>{conteo_campos_pendientes}</b></font>", context_body_style),
-            Paragraph(f"<b>Campos ya traducidos (omitidos):</b> <font color='#059669'><b>{conteo_campos_omitidos}</b></font>", context_body_style),
-            Paragraph("<b>Idioma:</b> Miskito (Miskitu bil)", context_body_style),
+            Paragraph(f"<b>Por traducir:</b> <font color='#DC2626'><b>{conteo_campos_pendientes}</b></font>", context_body_style),
+            Paragraph(f"<b>Ya traducidos:</b> <font color='#059669'><b>{conteo_campos_omitidos}</b></font>", context_body_style),
         ]
     ]
     t_resumen = Table(resumen_data, colWidths=[135, 135, 135, 135])
@@ -506,7 +588,9 @@ def generar_pdf_traduccion_miskito(ciudades_ids=None, buffer_destino=None, solo_
         "atractivos culturales, murales, gastronomía o tradiciones dentro de la ciudad.<br/>"
         "• <b>Punto de Interés (Parada o Hito):</b> Cada una de las estaciones que componen el circuito (taller artesanal, "
         "monumento, museo, mirador o gastronomía típica). Se indica el orden y la categoría.<br/>"
-        "• <b>Dato Histórico / Tradición:</b> Relatos, mitos, leyendas o saberes populares asociados a cada sitio.<br/><br/>"
+        "• <b>Dato Histórico / Tradición:</b> Relatos, mitos, leyendas o saberes populares asociados a cada sitio.<br/>"
+        "• <b>Evento / Festividad Cultural:</b> Fiestas patronales, festivales tradicionales, celebraciones religiosas y culturales "
+        "(ej. La Gritería, Alfombras Pasionarias, festivales del tabaco o patronales). Incluye nombre, fechas y contexto.<br/><br/>"
         "<b>GUÍA PARA EL TRADUCTOR:</b><br/>"
         "1. <b>Filtro de Contenidos:</b> Este documento solo muestra los textos que <b>aún no han sido traducidos</b> al Miskito.<br/>"
         "2. Traduzca el texto en español respetando el sentido cultural. Los nombres propios (ej. 'Sutiaba', 'Monimbó') "
@@ -528,11 +612,11 @@ def generar_pdf_traduccion_miskito(ciudades_ids=None, buffer_destino=None, solo_
     story.append(Spacer(1, 10))
 
     # CASO ESPECIAL: Todo el contenido ya está traducido
-    if len(ciudades_procesadas) == 0:
+    if len(ciudades_procesadas) == 0 and len(eventos_generales_items) == 0:
         completado_html = (
             "<font size=16 color='#047857'><b>🎉 ¡FELICIDADES! TRADUCCIÓN AL MISKITO COMPLETADA</b></font><br/><br/>"
-            "<font size=11 color='#1F2937'>No se encontraron textos pendientes de traducción en las ciudades con circuitos creativos.<br/>"
-            "Todos los nombres, descripciones y puntos de interés ya cuentan con su equivalente en idioma Miskito (Miskitu bil).<br/><br/>"
+            "<font size=11 color='#1F2937'>No se encontraron textos pendientes de traducción en las ciudades con circuitos creativos ni eventos.<br/>"
+            "Todos los nombres, descripciones, festividades y puntos de interés ya cuentan con su equivalente en idioma Miskito (Miskitu bil).<br/><br/>"
             "Si deseas descargar la guía completa con todos los contenidos traducidos como respaldo o revisión, "
             "selecciona la opción <b>'Descargar Completo'</b> en el panel de control.</font>"
         )
@@ -552,27 +636,47 @@ def generar_pdf_traduccion_miskito(ciudades_ids=None, buffer_destino=None, solo_
         return buffer_destino
 
     # Índice de Ciudades con elementos pendientes
-    story.append(Paragraph("<b>Índice de Ciudades con Contenidos Pendientes de Traducción:</b>", section_header_style))
+    story.append(Paragraph("<b>Índice de Elementos con Contenidos Pendientes de Traducción:</b>", section_header_style))
     tabla_indice_data = [
         [
-            Paragraph("<b>Ciudad</b>", table_header_style),
-            Paragraph("<b>Circuitos Pendientes</b>", table_header_style),
-            Paragraph("<b>Puntos Pendientes</b>", table_header_style),
-            Paragraph("<b>Detalle de Circuitos</b>", table_header_style)
+            Paragraph("<b>Ciudad / Ámbito</b>", table_header_style),
+            Paragraph("<b>Circuitos</b>", table_header_style),
+            Paragraph("<b>Paradas</b>", table_header_style),
+            Paragraph("<b>Eventos</b>", table_header_style),
+            Paragraph("<b>Detalle de Contenidos</b>", table_header_style)
         ]
     ]
     for c_info in ciudades_procesadas:
         c = c_info['objeto']
-        cirs_nombres = ", ".join([cir['objeto'].nombre for cir in c_info['circuitos']]) or "Solo datos generales de la ciudad"
+        cirs_nombres = ", ".join([cir['objeto'].nombre for cir in c_info['circuitos']])
+        evs_nombres = ", ".join([ev['objeto'].titulo for ev in c_info.get('eventos', [])])
+        detalles_partes = []
+        if cirs_nombres:
+            detalles_partes.append(f"<b>Rutas:</b> {cirs_nombres}")
+        if evs_nombres:
+            detalles_partes.append(f"<b>Fiestas:</b> {evs_nombres}")
+        detalle_texto = " • ".join(detalles_partes) or "Datos generales de la ciudad"
+
         pts_count = sum(len(cir['puntos']) for cir in c_info['circuitos'])
         tabla_indice_data.append([
             Paragraph(f"<b>{c.nombre}</b>", col_meta_style),
-            Paragraph(f"{len(c_info['circuitos'])} circuito(s)", col_spanish_style),
+            Paragraph(f"{len(c_info['circuitos'])} ruta(s)", col_spanish_style),
             Paragraph(f"{pts_count} parada(s)", col_spanish_style),
-            Paragraph(f"<font size=7 color='#4B5563'>{cirs_nombres}</font>", col_spanish_style),
+            Paragraph(f"{len(c_info.get('eventos', []))} fiesta(s)", col_spanish_style),
+            Paragraph(f"<font size=7 color='#4B5563'>{detalle_texto}</font>", col_spanish_style),
         ])
 
-    t_indice = Table(tabla_indice_data, colWidths=[100, 95, 85, 260])
+    if len(eventos_generales_items) > 0:
+        evs_g_nombres = ", ".join([ev_g['objeto'].titulo for ev_g in eventos_generales_items])
+        tabla_indice_data.append([
+            Paragraph("<b>Nacional / General</b>", col_meta_style),
+            Paragraph("—", col_spanish_style),
+            Paragraph("—", col_spanish_style),
+            Paragraph(f"{len(eventos_generales_items)} fiesta(s)", col_spanish_style),
+            Paragraph(f"<font size=7 color='#4B5563'><b>Fiestas:</b> {evs_g_nombres}</font>", col_spanish_style),
+        ])
+
+    t_indice = Table(tabla_indice_data, colWidths=[95, 65, 65, 65, 250])
     t_indice.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), primary_color),
         ('BOX', (0, 0), (-1, -1), 1, border_color),
@@ -672,8 +776,88 @@ def generar_pdf_traduccion_miskito(ciudades_ids=None, buffer_destino=None, solo_
             story.append(t_ciudad)
             story.append(Spacer(1, 8))
         else:
-            story.append(Paragraph("<font size=8.5 color='#059669'>✓ <i>Los datos generales de esta ciudad ya están completamente traducidos. A continuación se presentan los circuitos y paradas pendientes:</i></font>", subtitle_style))
+            story.append(Paragraph("<font size=8.5 color='#059669'>✓ <i>Los datos generales de esta ciudad ya están completamente traducidos. A continuación se presentan las festividades, circuitos y paradas pendientes:</i></font>", subtitle_style))
             story.append(Spacer(1, 4))
+
+        # =====================================================================
+        # EVENTOS Y FESTIVIDADES CULTURALES DE LA CIUDAD
+        # =====================================================================
+        eventos_ciudad = c_info.get('eventos', [])
+        if len(eventos_ciudad) > 0:
+            story.append(Spacer(1, 4))
+            banner_eventos = Table(
+                [[
+                    Paragraph(f"<font size=10 color='white'><b>🎉 EVENTOS Y FESTIVIDADES CULTURALES ({len(eventos_ciudad)} pendiente(s))</b></font>", table_header_style),
+                    Paragraph(f"<font size=8 color='#DDD6FE'>Festividades de {ciudad.nombre}</font>", ParagraphStyle('EVR', parent=table_header_style, alignment=2))
+                ]],
+                colWidths=[340, 200]
+            )
+            banner_eventos.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, -1), event_color),
+                ('TOPPADDING', (0, 0), (-1, -1), 4),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+                ('LEFTPADDING', (0, 0), (-1, -1), 8),
+                ('RIGHTPADDING', (0, 0), (-1, -1), 8),
+            ]))
+            story.append(banner_eventos)
+            story.append(Spacer(1, 2))
+
+            for ev_info in eventos_ciudad:
+                ev = ev_info['objeto']
+                filas_evento = [
+                    [
+                        Paragraph("<b>Campo & Referencia</b>", table_header_style),
+                        Paragraph("<b>Texto Original en Español</b>", table_header_style),
+                        Paragraph("<b>Traducción al Miskito (Miskitu bil)</b>", table_header_style),
+                    ]
+                ]
+
+                if not solo_pendientes or ev_info['titulo_pendiente']:
+                    filas_evento.append([
+                        Paragraph(f"<b>Nombre del Evento</b><br/>"
+                                  f"<font size=7 color='#6B7280'>[REF: EVENTO:{ev.id}:titulo_miq]</font><br/>"
+                                  f"<font size=6.5 color='#6D28D9'>Festividad cultural</font><br/>"
+                                  f"{'<font size=6.5 color=\"#DC2626\">● Pendiente</font>' if ev_info['titulo_pendiente'] else '<font size=6.5 color=\"#059669\">✓ Traducido</font>'}", col_meta_style),
+                        Paragraph(f"<b>{ev.titulo}</b>", col_spanish_style),
+                        Paragraph(ev.titulo_miq if ev.titulo_miq else "<font color='#9CA3AF'>[ Escribir nombre del evento en Miskito ]</font><br/><br/>________________________________________", col_miskito_style if ev.titulo_miq else col_write_prompt_style)
+                    ])
+
+                if ev.rango_celebracion and (not solo_pendientes or ev_info['rango_pendiente']):
+                    filas_evento.append([
+                        Paragraph(f"<b>Fecha / Rango</b><br/>"
+                                  f"<font size=7 color='#6B7280'>[REF: EVENTO:{ev.id}:rango_celebracion_miq]</font><br/>"
+                                  f"<font size=6.5 color='#6D28D9'>Período tradicional de celebración</font><br/>"
+                                  f"{'<font size=6.5 color=\"#DC2626\">● Pendiente</font>' if ev_info['rango_pendiente'] else '<font size=6.5 color=\"#059669\">✓ Traducido</font>'}", col_meta_style),
+                        Paragraph(f"{ev.rango_celebracion}", col_spanish_style),
+                        Paragraph(ev.rango_celebracion_miq if ev.rango_celebracion_miq else "<font color='#9CA3AF'>[ Escribir rango/fecha en Miskito ]</font><br/>________________________________________", col_miskito_style if ev.rango_celebracion_miq else col_write_prompt_style)
+                    ])
+
+                if not solo_pendientes or ev_info['descripcion_pendiente']:
+                    filas_evento.append([
+                        Paragraph(f"<b>Descripción del Evento</b><br/>"
+                                  f"<font size=7 color='#6B7280'>[REF: EVENTO:{ev.id}:descripcion_miq]</font><br/>"
+                                  f"<font size=6.5 color='#6D28D9'>Contexto de la festividad</font><br/>"
+                                  f"{'<font size=6.5 color=\"#DC2626\">● Pendiente</font>' if ev_info['descripcion_pendiente'] else '<font size=6.5 color=\"#059669\">✓ Traducido</font>'}", col_meta_style),
+                        Paragraph(ev.descripcion or "<i>Sin descripción</i>", col_spanish_style),
+                        Paragraph(ev.descripcion_miq if ev.descripcion_miq else "<font color='#9CA3AF'>[ Escribir traducción al Miskito de la festividad ]</font><br/><br/><br/>________________________________________<br/>________________________________________", col_miskito_style if ev.descripcion_miq else col_write_prompt_style)
+                    ])
+
+                if len(filas_evento) > 1:
+                    t_evento = Table(filas_evento, colWidths=[120, 210, 210])
+                    t_evento.setStyle(TableStyle([
+                        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#5B21B6")),
+                        ('BOX', (0, 0), (-1, -1), 1, border_color),
+                        ('INNERGRID', (0, 0), (-1, -1), 0.5, border_color),
+                        ('BACKGROUND', (0, 1), (-1, 1), colors.HexColor("#F5F3FF")),
+                        ('BACKGROUND', (2, 1), (2, -1), colors.HexColor("#FEFCE8")),
+                        ('TOPPADDING', (0, 0), (-1, -1), 4),
+                        ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+                        ('LEFTPADDING', (0, 0), (-1, -1), 6),
+                        ('RIGHTPADDING', (0, 0), (-1, -1), 6),
+                        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+                    ]))
+                    story.append(KeepTogether(t_evento))
+                    story.append(Spacer(1, 4))
 
         # =====================================================================
         # CIRCUITOS CREATIVOS DENTRO DE LA CIUDAD
@@ -802,6 +986,84 @@ def generar_pdf_traduccion_miskito(ciudades_ids=None, buffer_destino=None, solo_
                         story.append(Spacer(1, 4))
 
             story.append(Spacer(1, 6))
+
+    # =========================================================================
+    # EVENTOS Y FESTIVIDADES GENERALES / NACIONALES (SIN CIUDAD ESPECÍFICA)
+    # =========================================================================
+    if len(eventos_generales_items) > 0:
+        if len(ciudades_procesadas) > 0:
+            story.append(PageBreak())
+
+        banner_gral = Table(
+            [[
+                Paragraph("<font size=13 color='white'><b>🎉 EVENTOS Y FESTIVIDADES NACIONALES / GENERALES</b></font>", table_header_style),
+                Paragraph(f"<font size=8.5 color='#DDD6FE'><b>{len(eventos_generales_items)} Eventos con pendientes</b></font>", ParagraphStyle('EVGR', parent=table_header_style, alignment=2))
+            ]],
+            colWidths=[350, 190]
+        )
+        banner_gral.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, -1), event_color),
+            ('TOPPADDING', (0, 0), (-1, -1), 6),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+            ('LEFTPADDING', (0, 0), (-1, -1), 10),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 10),
+        ]))
+        story.append(banner_gral)
+        story.append(Spacer(1, 6))
+
+        for ev_g_info in eventos_generales_items:
+            ev = ev_g_info['objeto']
+            filas_ev_g = [
+                [
+                    Paragraph("<b>Campo & Referencia</b>", table_header_style),
+                    Paragraph("<b>Texto Original en Español</b>", table_header_style),
+                    Paragraph("<b>Traducción al Miskito (Miskitu bil)</b>", table_header_style),
+                ]
+            ]
+            if not solo_pendientes or ev_g_info['titulo_pendiente']:
+                filas_ev_g.append([
+                    Paragraph(f"<b>Nombre del Evento</b><br/>"
+                              f"<font size=7 color='#6B7280'>[REF: EVENTO:{ev.id}:titulo_miq]</font><br/>"
+                              f"<font size=6.5 color='#6D28D9'>Festividad nacional o general</font><br/>"
+                              f"{'<font size=6.5 color=\"#DC2626\">● Pendiente</font>' if ev_g_info['titulo_pendiente'] else '<font size=6.5 color=\"#059669\">✓ Traducido</font>'}", col_meta_style),
+                    Paragraph(f"<b>{ev.titulo}</b>", col_spanish_style),
+                    Paragraph(ev.titulo_miq if ev.titulo_miq else "<font color='#9CA3AF'>[ Escribir nombre del evento en Miskito ]</font><br/><br/>________________________________________", col_miskito_style if ev.titulo_miq else col_write_prompt_style)
+                ])
+            if ev.rango_celebracion and (not solo_pendientes or ev_g_info['rango_pendiente']):
+                filas_ev_g.append([
+                    Paragraph(f"<b>Fecha / Rango</b><br/>"
+                              f"<font size=7 color='#6B7280'>[REF: EVENTO:{ev.id}:rango_celebracion_miq]</font><br/>"
+                              f"<font size=6.5 color='#6D28D9'>Período tradicional de celebración</font><br/>"
+                              f"{'<font size=6.5 color=\"#DC2626\">● Pendiente</font>' if ev_g_info['rango_pendiente'] else '<font size=6.5 color=\"#059669\">✓ Traducido</font>'}", col_meta_style),
+                    Paragraph(f"{ev.rango_celebracion}", col_spanish_style),
+                    Paragraph(ev.rango_celebracion_miq if ev.rango_celebracion_miq else "<font color='#9CA3AF'>[ Escribir rango/fecha en Miskito ]</font><br/>________________________________________", col_miskito_style if ev.rango_celebracion_miq else col_write_prompt_style)
+                ])
+            if not solo_pendientes or ev_g_info['descripcion_pendiente']:
+                filas_ev_g.append([
+                    Paragraph(f"<b>Descripción del Evento</b><br/>"
+                              f"<font size=7 color='#6B7280'>[REF: EVENTO:{ev.id}:descripcion_miq]</font><br/>"
+                              f"<font size=6.5 color='#6D28D9'>Contexto de la festividad</font><br/>"
+                              f"{'<font size=6.5 color=\"#DC2626\">● Pendiente</font>' if ev_g_info['descripcion_pendiente'] else '<font size=6.5 color=\"#059669\">✓ Traducido</font>'}", col_meta_style),
+                    Paragraph(ev.descripcion or "<i>Sin descripción</i>", col_spanish_style),
+                    Paragraph(ev.descripcion_miq if ev.descripcion_miq else "<font color='#9CA3AF'>[ Escribir traducción al Miskito de la festividad ]</font><br/><br/><br/>________________________________________<br/>________________________________________", col_miskito_style if ev.descripcion_miq else col_write_prompt_style)
+                ])
+
+            if len(filas_ev_g) > 1:
+                t_ev_g = Table(filas_ev_g, colWidths=[120, 210, 210])
+                t_ev_g.setStyle(TableStyle([
+                    ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#5B21B6")),
+                    ('BOX', (0, 0), (-1, -1), 1, border_color),
+                    ('INNERGRID', (0, 0), (-1, -1), 0.5, border_color),
+                    ('BACKGROUND', (0, 1), (-1, 1), colors.HexColor("#F5F3FF")),
+                    ('BACKGROUND', (2, 1), (2, -1), colors.HexColor("#FEFCE8")),
+                    ('TOPPADDING', (0, 0), (-1, -1), 4),
+                    ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+                    ('LEFTPADDING', (0, 0), (-1, -1), 6),
+                    ('RIGHTPADDING', (0, 0), (-1, -1), 6),
+                    ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+                ]))
+                story.append(KeepTogether(t_ev_g))
+                story.append(Spacer(1, 4))
 
     # Construir documento PDF con NumberedCanvas
     doc.build(story, canvasmaker=NumberedCanvas)

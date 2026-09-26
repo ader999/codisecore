@@ -1,9 +1,10 @@
 from django.test import TestCase, Client
 from django.urls import reverse
+from django.utils import timezone
 from rest_framework.test import APIClient, APIRequestFactory
-from .models import User, Ciudad, CircuitoCreativo, PuntoInteres
+from .models import User, Ciudad, CircuitoCreativo, PuntoInteres, Evento
 from .serializers import CiudadSerializer
-from .pdf_export_service import generar_pdf_traduccion_miskito
+from .pdf_export_service import generar_pdf_traduccion_miskito, obtener_estadisticas_traduccion_miskito
 
 
 class MiskitoTranslationTests(TestCase):
@@ -153,3 +154,59 @@ class MiskitoTranslationTests(TestCase):
         resp_admin_pend = client_admin.get(f"{url_admin}?solo_pendientes=1")
         self.assertEqual(resp_admin_pend.status_code, 200)
         self.assertIn('Pendientes', resp_admin_pend['Content-Disposition'])
+
+    def test_eventos_incluidos_en_pdf_traduccion_miskito(self):
+        """Verifica que los eventos culturales (tanto de ciudad como generales) se incluyan en el PDF de traducción."""
+        # Crear un evento para León Test sin traducción en Miskito
+        evento_leon = Evento.objects.create(
+            creador=self.admin_user,
+            ciudad=self.ciudad_con_circuito,
+            titulo="La Gritería Chiquita",
+            descripcion="Celebración tradicional leonesa a la Virgen de la Asunción",
+            rango_celebracion="14 de agosto",
+            fecha_inicio=timezone.now(),
+            ubicacion="Plaza Central de Sutiaba",
+            esta_activo=True
+        )
+
+        # Crear un evento nacional/general sin ciudad asignada
+        evento_nacional = Evento.objects.create(
+            creador=self.admin_user,
+            ciudad=None,
+            titulo="Festival Nacional de Tradiciones",
+            descripcion="Encuentro de danzas y gastronomía de todo el país",
+            fecha_inicio=timezone.now(),
+            ubicacion="Teatro Nacional Rubén Darío",
+            esta_activo=True
+        )
+
+        # Comprobar estadísticas
+        stats = obtener_estadisticas_traduccion_miskito()
+        self.assertGreaterEqual(stats['eventos_pendientes'], 1)
+
+        # Generar PDF en modo solo pendientes
+        pdf_buf = generar_pdf_traduccion_miskito(solo_pendientes=True)
+        pdf_content = pdf_buf.getvalue()
+        self.assertTrue(pdf_content.startswith(b'%PDF'))
+        self.assertGreater(len(pdf_content), 2000)
+
+        # Traducir los eventos
+        evento_leon.titulo_miq = "La Gritería Sirpi"
+        evento_leon.descripcion_miq = "Paskwa leonesa Virgen de la Asunción ra"
+        evento_leon.rango_celebracion_miq = "14 kati agosto ra"
+        evento_leon.save()
+
+        evento_nacional.titulo_miq = "Nacional Tradicion Festival"
+        evento_nacional.descripcion_miq = "Danzas bara plun nani"
+        evento_nacional.save()
+
+        # Completar traducción de la ciudad y circuitos
+        self.circuito.descripcion_miq = "Traducido circuito"
+        self.circuito.save()
+        self.punto.descripcion_miq = "Traducido punto"
+        self.punto.save()
+
+        # Al estar todo traducido, solo_pendientes genera el aviso de completado
+        pdf_completado = generar_pdf_traduccion_miskito(solo_pendientes=True)
+        self.assertTrue(pdf_completado.getvalue().startswith(b'%PDF'))
+
