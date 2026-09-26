@@ -89,7 +89,9 @@ class CiudadAdmin(OcultarTraduccionesAlCrearMixin, admin.ModelAdmin):
         return f"{count} circuito(s)"
     ver_circuitos.short_description = "Circuitos"
 
-    @admin.action(description="📄 Exportar a PDF para Traducción Miskito (Ciudades con Circuitos)")
+    actions = ['exportar_a_pdf_miskito', 'exportar_a_pdf_miskito_completo']
+
+    @admin.action(description="📄 Exportar a PDF Miskito (Solo lo pendiente por traducir)")
     def exportar_a_pdf_miskito(self, request, queryset):
         ciudades_con_circuitos = queryset.filter(circuitos__isnull=False).distinct()
         if not ciudades_con_circuitos.exists():
@@ -101,9 +103,26 @@ class CiudadAdmin(OcultarTraduccionesAlCrearMixin, admin.ModelAdmin):
             return None
 
         ciudades_ids = list(ciudades_con_circuitos.values_list('id', flat=True))
-        pdf_buffer = generar_pdf_traduccion_miskito(ciudades_ids=ciudades_ids)
+        pdf_buffer = generar_pdf_traduccion_miskito(ciudades_ids=ciudades_ids, solo_pendientes=True)
         response = FileResponse(pdf_buffer, content_type='application/pdf')
-        response['Content-Disposition'] = 'attachment; filename="Codice_Traduccion_Miskito.pdf"'
+        response['Content-Disposition'] = 'attachment; filename="Codice_Traduccion_Miskito_Pendientes.pdf"'
+        return response
+
+    @admin.action(description="📚 Exportar a PDF Miskito (Completo con todos los elementos)")
+    def exportar_a_pdf_miskito_completo(self, request, queryset):
+        ciudades_con_circuitos = queryset.filter(circuitos__isnull=False).distinct()
+        if not ciudades_con_circuitos.exists():
+            self.message_user(
+                request,
+                "Ninguna de las ciudades seleccionadas tiene circuitos creativos.",
+                level=messages.WARNING
+            )
+            return None
+
+        ciudades_ids = list(ciudades_con_circuitos.values_list('id', flat=True))
+        pdf_buffer = generar_pdf_traduccion_miskito(ciudades_ids=ciudades_ids, solo_pendientes=False)
+        response = FileResponse(pdf_buffer, content_type='application/pdf')
+        response['Content-Disposition'] = 'attachment; filename="Codice_Traduccion_Miskito_Completo.pdf"'
         return response
 
     def get_urls(self):
@@ -119,9 +138,11 @@ class CiudadAdmin(OcultarTraduccionesAlCrearMixin, admin.ModelAdmin):
         return custom_urls + urls
 
     def vista_exportar_miskito_pdf(self, request):
-        pdf_buffer = generar_pdf_traduccion_miskito()
+        solo_pend = request.GET.get('solo_pendientes', '1').lower() not in ('0', 'false', 'no')
+        pdf_buffer = generar_pdf_traduccion_miskito(solo_pendientes=solo_pend)
         response = FileResponse(pdf_buffer, content_type='application/pdf')
-        response['Content-Disposition'] = 'attachment; filename="Codice_Documentacion_Traduccion_Miskito.pdf"'
+        nombre_archivo = "Codice_Documentacion_Miskito_Pendientes.pdf" if solo_pend else "Codice_Documentacion_Miskito_Completo.pdf"
+        response['Content-Disposition'] = f'attachment; filename="{nombre_archivo}"'
         return response
 
 

@@ -255,7 +255,10 @@ class CiudadViewSet(viewsets.ModelViewSet):
         """
         Descarga la guía en PDF para traductores al idioma Miskito (Miskitu).
         Excluye automáticamente ciudades que no tienen circuitos creativos.
-        Permite filtrar ciudades específicas con ?ciudades=11,14 o ?ids=11,14
+        Por defecto incluye únicamente la información pendiente de traducción.
+        Permite:
+        - ?solo_pendientes=1 (por defecto) o ?solo_pendientes=0 (completo)
+        - ?ciudades=11,14 o ?ids=11,14 para filtrar ciudades específicas
         """
         from django.http import FileResponse
         from .pdf_export_service import generar_pdf_traduccion_miskito
@@ -268,9 +271,13 @@ class CiudadViewSet(viewsets.ModelViewSet):
             except Exception:
                 ciudades_ids = None
 
-        pdf_buffer = generar_pdf_traduccion_miskito(ciudades_ids=ciudades_ids)
+        param_pend = request.query_params.get('solo_pendientes', request.query_params.get('pendientes', '1'))
+        solo_pend = str(param_pend).lower() not in ('0', 'false', 'no')
+
+        pdf_buffer = generar_pdf_traduccion_miskito(ciudades_ids=ciudades_ids, solo_pendientes=solo_pend)
+        nombre_archivo = "Codice_Guia_Traduccion_Miskito_Pendientes.pdf" if solo_pend else "Codice_Guia_Traduccion_Miskito_Completo.pdf"
         response = FileResponse(pdf_buffer, content_type='application/pdf')
-        response['Content-Disposition'] = 'attachment; filename="Codice_Guia_Traduccion_Miskito.pdf"'
+        response['Content-Disposition'] = f'attachment; filename="{nombre_archivo}"'
         return response
 
 
@@ -292,9 +299,13 @@ class ExportarMiskitoPDFView(APIView):
             except Exception:
                 ciudades_ids = None
 
-        pdf_buffer = generar_pdf_traduccion_miskito(ciudades_ids=ciudades_ids)
+        param_pend = request.query_params.get('solo_pendientes', request.query_params.get('pendientes', '1'))
+        solo_pend = str(param_pend).lower() not in ('0', 'false', 'no')
+
+        pdf_buffer = generar_pdf_traduccion_miskito(ciudades_ids=ciudades_ids, solo_pendientes=solo_pend)
+        nombre_archivo = "Codice_Guia_Traduccion_Miskito_Pendientes.pdf" if solo_pend else "Codice_Guia_Traduccion_Miskito_Completo.pdf"
         response = FileResponse(pdf_buffer, content_type='application/pdf')
-        response['Content-Disposition'] = 'attachment; filename="Codice_Guia_Traduccion_Miskito.pdf"'
+        response['Content-Disposition'] = f'attachment; filename="{nombre_archivo}"'
         return response
 
 
