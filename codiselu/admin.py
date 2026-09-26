@@ -8,6 +8,7 @@ from .models import (
     ComentarioPublicacion
 )
 from .pdf_export_service import generar_pdf_traduccion_miskito
+from .excel_export_service import generar_excel_traduccion_miskito
 
 # Personalización del Panel de Control Codice路
 admin.site.site_header = "Codice路"
@@ -89,7 +90,7 @@ class CiudadAdmin(OcultarTraduccionesAlCrearMixin, admin.ModelAdmin):
         return f"{count} circuito(s)"
     ver_circuitos.short_description = "Circuitos"
 
-    actions = ['exportar_a_pdf_miskito_horizontal', 'exportar_a_pdf_miskito', 'exportar_a_pdf_miskito_completo']
+    actions = ['exportar_a_pdf_miskito_horizontal', 'exportar_a_excel_miskito', 'exportar_a_pdf_miskito_completo', 'exportar_a_pdf_miskito']
 
     @admin.action(description="📐 Exportar a PDF Miskito Horizontal (Hoja apaisada con columna ampliada)")
     def exportar_a_pdf_miskito_horizontal(self, request, queryset):
@@ -106,6 +107,26 @@ class CiudadAdmin(OcultarTraduccionesAlCrearMixin, admin.ModelAdmin):
         pdf_buffer = generar_pdf_traduccion_miskito(ciudades_ids=ciudades_ids, solo_pendientes=True, orientacion='horizontal')
         response = FileResponse(pdf_buffer, content_type='application/pdf')
         response['Content-Disposition'] = 'attachment; filename="Codice_Traduccion_Miskito_Horizontal.pdf"'
+        return response
+
+    @admin.action(description="📊 Exportar a Excel Miskito (Solo lo pendiente por traducir)")
+    def exportar_a_excel_miskito(self, request, queryset):
+        ciudades_con_circuitos = queryset.filter(circuitos__isnull=False).distinct()
+        if not ciudades_con_circuitos.exists():
+            self.message_user(
+                request,
+                "Ninguna de las ciudades seleccionadas tiene circuitos creativos para traducir.",
+                level=messages.WARNING
+            )
+            return None
+
+        ciudades_ids = list(ciudades_con_circuitos.values_list('id', flat=True))
+        excel_buffer = generar_excel_traduccion_miskito(ciudades_ids=ciudades_ids, solo_pendientes=True)
+        response = FileResponse(
+            excel_buffer,
+            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+        response['Content-Disposition'] = 'attachment; filename="Codice_Plantilla_Miskito_Pendientes.xlsx"'
         return response
 
     @admin.action(description="📄 Exportar a PDF Miskito (Solo lo pendiente por traducir)")
@@ -151,6 +172,11 @@ class CiudadAdmin(OcultarTraduccionesAlCrearMixin, admin.ModelAdmin):
                 self.admin_site.admin_view(self.vista_exportar_miskito_pdf),
                 name='codiselu_ciudad_exportar_miskito'
             ),
+            path(
+                'exportar-miskito-excel/',
+                self.admin_site.admin_view(self.vista_exportar_miskito_excel),
+                name='codiselu_ciudad_exportar_miskito_excel'
+            ),
         ]
         return custom_urls + urls
 
@@ -166,6 +192,18 @@ class CiudadAdmin(OcultarTraduccionesAlCrearMixin, admin.ModelAdmin):
         sufijo_orient = "_Horizontal" if es_horiz else ""
         sufijo_modo = "Pendientes" if solo_pend else "Completo"
         nombre_archivo = f"Codice_Documentacion_Miskito_{sufijo_modo}{sufijo_orient}.pdf"
+        response['Content-Disposition'] = f'attachment; filename="{nombre_archivo}"'
+        return response
+
+    def vista_exportar_miskito_excel(self, request):
+        solo_pend = request.GET.get('solo_pendientes', '1').lower() not in ('0', 'false', 'no')
+        excel_buffer = generar_excel_traduccion_miskito(solo_pendientes=solo_pend)
+        response = FileResponse(
+            excel_buffer,
+            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+        sufijo_modo = "Pendientes" if solo_pend else "Completo"
+        nombre_archivo = f"Codice_Plantilla_Miskito_{sufijo_modo}.xlsx"
         response['Content-Disposition'] = f'attachment; filename="{nombre_archivo}"'
         return response
 

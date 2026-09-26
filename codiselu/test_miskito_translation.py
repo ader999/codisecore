@@ -5,6 +5,8 @@ from rest_framework.test import APIClient, APIRequestFactory
 from .models import User, Ciudad, CircuitoCreativo, PuntoInteres, Evento
 from .serializers import CiudadSerializer
 from .pdf_export_service import generar_pdf_traduccion_miskito, obtener_estadisticas_traduccion_miskito
+from .excel_export_service import generar_excel_traduccion_miskito
+import openpyxl
 
 
 class MiskitoTranslationTests(TestCase):
@@ -291,5 +293,42 @@ class MiskitoTranslationTests(TestCase):
         self.assertIsNotNone(pdf_horiz_comp)
         self.assertTrue(pdf_horiz_comp.getvalue().startswith(b'%PDF'))
         self.assertGreater(len(pdf_horiz_comp.getvalue()), 2000)
+
+    def test_generar_excel_traduccion_miskito_retorna_bytesio_valido(self):
+        """Verifica que generar_excel_traduccion_miskito genere un archivo .xlsx válido con openpyxl."""
+        excel_buf = generar_excel_traduccion_miskito(solo_pendientes=True)
+        self.assertIsNotNone(excel_buf)
+        excel_bytes = excel_buf.getvalue()
+        self.assertGreater(len(excel_bytes), 1000)
+        # Cargar con openpyxl para verificar integridad
+        wb = openpyxl.load_workbook(excel_buf)
+        self.assertIn("Instrucciones y Resumen", wb.sheetnames)
+        self.assertIn("Plantilla de Traducción", wb.sheetnames)
+        ws_data = wb["Plantilla de Traducción"]
+        # Fila 1 es cabecera con 10 columnas
+        self.assertEqual(ws_data.cell(row=1, column=1).value, "REF (Código Técnico)")
+        self.assertEqual(ws_data.cell(row=1, column=8).value, "Traducción al Miskito (Miskitu bil)")
+
+    def test_admin_export_miskito_excel_view(self):
+        """Verifica que la vista del admin devuelva el Excel correctamente."""
+        client = Client()
+        client.force_login(self.admin_user)
+        url = reverse('admin:codiselu_ciudad_exportar_miskito_excel')
+        resp = client.get(url)
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', resp['Content-Type'])
+        self.assertIn('Pendientes.xlsx', resp['Content-Disposition'])
+
+    def test_api_endpoints_exportar_miskito_excel(self):
+        """Verifica los endpoints API para exportar Excel."""
+        client = APIClient()
+        resp1 = client.get('/api/ciudades/exportar-miskito-excel/?solo_pendientes=1')
+        self.assertEqual(resp1.status_code, 200)
+        self.assertIn('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', resp1['Content-Type'])
+        self.assertIn('Pendientes.xlsx', resp1['Content-Disposition'])
+
+        resp2 = client.get('/api/exportar-miskito-excel/?solo_pendientes=0')
+        self.assertEqual(resp2.status_code, 200)
+        self.assertIn('Completo.xlsx', resp2['Content-Disposition'])
 
 
