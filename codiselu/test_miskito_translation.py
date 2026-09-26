@@ -270,3 +270,26 @@ class MiskitoTranslationTests(TestCase):
         self.assertEqual(resp2['Content-Type'], 'application/pdf')
         self.assertIn('Horizontal', resp2['Content-Disposition'])
 
+    def test_pdf_horizontal_con_texto_muy_extenso_no_causa_layouterror(self):
+        """Verifica que textos muy extensos (> 2000 caracteres, ej. Managua) se dividan y generen PDF horizontal sin LayoutError."""
+        # Configurar la ciudad con una descripción sumamente extensa (> 2500 caracteres)
+        self.ciudad_con_circuito.descripcion = (
+            "Managua es la capital de Nicaragua y cabecera del departamento homónimo. "
+            "Posee una historia vibrante con múltiples eventos culturales y tradicionales. " * 20
+        )
+        self.ciudad_con_circuito.descripcion_miq = ""  # Pendiente de traducción
+        self.ciudad_con_circuito.save()
+
+        # Generar en formato horizontal con solo_pendientes=True
+        pdf_horiz = generar_pdf_traduccion_miskito(orientacion='horizontal', solo_pendientes=True)
+        self.assertIsNotNone(pdf_horiz)
+        self.assertTrue(pdf_horiz.getvalue().startswith(b'%PDF'))
+        self.assertGreater(len(pdf_horiz.getvalue()), 2000)
+
+        # Generar en formato horizontal con solo_pendientes=False
+        pdf_horiz_comp = generar_pdf_traduccion_miskito(orientacion='horizontal', solo_pendientes=False)
+        self.assertIsNotNone(pdf_horiz_comp)
+        self.assertTrue(pdf_horiz_comp.getvalue().startswith(b'%PDF'))
+        self.assertGreater(len(pdf_horiz_comp.getvalue()), 2000)
+
+

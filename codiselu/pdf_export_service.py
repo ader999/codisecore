@@ -105,6 +105,60 @@ def crear_bloque_escritura_miskito(texto_traducido, prompt_guia, num_lineas=3, l
     return t
 
 
+def dividir_texto_en_bloques(texto, max_chars=450):
+    """
+    Divide un texto extenso en bloques manejables (< max_chars) respetando
+    párrafos y oraciones para que ninguna celda de tabla exceda la altura
+    imprimible de la página en ReportLab (evita LayoutError en hojas horizontales o verticales).
+    """
+    if not texto:
+        return []
+    texto_limpio = str(texto).replace('<br/>', '\n').replace('<br>', '\n').strip()
+    if len(texto_limpio) <= max_chars:
+        return [texto_limpio]
+
+    lineas = [p.strip() for p in texto_limpio.split('\n') if p.strip()]
+    bloques = []
+
+    for linea in lineas:
+        if len(linea) <= max_chars:
+            bloques.append(linea)
+        else:
+            oraciones = [o.strip() for o in linea.split('. ') if o.strip()]
+            chunk_actual = ""
+            for o in oraciones:
+                o_con_punto = o if o.endswith('.') else (o + '.')
+                if not chunk_actual:
+                    chunk_actual = o_con_punto
+                elif len(chunk_actual) + 1 + len(o_con_punto) <= max_chars:
+                    chunk_actual += " " + o_con_punto
+                else:
+                    bloques.append(chunk_actual)
+                    chunk_actual = o_con_punto
+            if chunk_actual:
+                bloques.append(chunk_actual)
+
+    bloques_finales = []
+    for b in bloques:
+        if len(b) <= max_chars * 1.25:
+            bloques_finales.append(b)
+        else:
+            palabras = b.split(' ')
+            cur = ""
+            for pal in palabras:
+                if not cur:
+                    cur = pal
+                elif len(cur) + 1 + len(pal) <= max_chars:
+                    cur += " " + pal
+                else:
+                    bloques_finales.append(cur)
+                    cur = pal
+            if cur:
+                bloques_finales.append(cur)
+
+    return bloques_finales or [texto_limpio]
+
+
 def obtener_estadisticas_traduccion_miskito():
     """
     Devuelve un diccionario con el recuento total y pendiente de traducción al Miskito
@@ -578,6 +632,110 @@ def generar_pdf_traduccion_miskito(ciudades_ids=None, buffer_destino=None, solo_
             ancho_bloque=ancho_miskito_bloque
         )
 
+    def _agregar_filas_texto_extenso(
+        filas_destino,
+        titulo_campo,
+        subtitulo_campo,
+        ref_id,
+        es_pendiente,
+        texto_original,
+        texto_traducido,
+        prompt_guia,
+        color_subtitulo="#92400E",
+        max_chars=450
+    ):
+        texto_orig_limpio = (texto_original or "").strip()
+        if not texto_orig_limpio:
+            filas_destino.append([
+                Paragraph(f"<b>{titulo_campo}</b><br/>"
+                          f"<font size=7 color='#6B7280'>[REF: {ref_id}]</font><br/>"
+                          f"{f'<font size=6.5 color=\"{color_subtitulo}\">{subtitulo_campo}</font><br/>' if subtitulo_campo else ''}"
+                          f"{'<font size=6.5 color=\"#DC2626\">● Pendiente</font>' if es_pendiente else '<font size=6.5 color=\"#059669\">✓ Traducido</font>'}", col_meta_style),
+                Paragraph("<i>Sin descripción registrada</i>", col_spanish_style),
+                _bloque_miskito(texto_traducido, prompt_guia, num_lineas=3, line_height=22)
+            ])
+            return
+
+        bloques_es = dividir_texto_en_bloques(texto_orig_limpio, max_chars=max_chars)
+        total_partes = len(bloques_es)
+
+        if total_partes <= 1:
+            lineas = 7 if len(texto_orig_limpio) > 220 else 5
+            filas_destino.append([
+                Paragraph(f"<b>{titulo_campo}</b><br/>"
+                          f"<font size=7 color='#6B7280'>[REF: {ref_id}]</font><br/>"
+                          f"{f'<font size=6.5 color=\"{color_subtitulo}\">{subtitulo_campo}</font><br/>' if subtitulo_campo else ''}"
+                          f"{'<font size=6.5 color=\"#DC2626\">● Pendiente</font>' if es_pendiente else '<font size=6.5 color=\"#059669\">✓ Traducido</font>'}", col_meta_style),
+                Paragraph(texto_orig_limpio, col_spanish_style),
+                _bloque_miskito(texto_traducido, prompt_guia, num_lineas=lineas, line_height=22)
+            ])
+        else:
+            bloques_miq = dividir_texto_en_bloques(str(texto_traducido).strip(), max_chars=max_chars) if (texto_traducido and str(texto_traducido).strip()) else []
+
+            for i, b_es in enumerate(bloques_es):
+                num_parte = f"(Parte {i+1}/{total_partes})"
+                ref_parte = f"{ref_id}:p{i+1}"
+                if bloques_miq:
+                    val_miq = bloques_miq[i] if i < len(bloques_miq) else "(Traducción en parte anterior)"
+                else:
+                    val_miq = None
+
+                lineas = 6 if len(b_es) > 220 else 5
+                prompt_p = prompt_guia.replace(" ]", f" {num_parte} ]") if " ]" in prompt_guia else f"{prompt_guia} {num_parte}"
+
+                filas_destino.append([
+                    Paragraph(f"<b>{titulo_campo} {num_parte}</b><br/>"
+                              f"<font size=7 color='#6B7280'>[REF: {ref_parte}]</font><br/>"
+                              f"{f'<font size=6.5 color=\"{color_subtitulo}\">{subtitulo_campo}</font><br/>' if subtitulo_campo else ''}"
+                              f"{'<font size=6.5 color=\"#DC2626\">● Pendiente</font>' if es_pendiente else '<font size=6.5 color=\"#059669\">✓ Traducido</font>'}", col_meta_style),
+                    Paragraph(b_es, col_spanish_style),
+                    _bloque_miskito(val_miq, prompt_p, num_lineas=lineas, line_height=22)
+                ])
+
+    def _agregar_filas_dato_historico(
+        filas_destino,
+        dh,
+        traduccion_dh,
+        ref_id,
+        subtitulo,
+        color_subtitulo="#92400E",
+        max_chars=450
+    ):
+        contenido_limpio = (dh.contenido or "").strip()
+        bloques_dh = dividir_texto_en_bloques(contenido_limpio, max_chars=max_chars) if contenido_limpio else []
+        total_partes = len(bloques_dh)
+
+        if total_partes <= 1:
+            lineas_dh = 7 if (contenido_limpio and len(contenido_limpio) > 220) else 6
+            filas_destino.append([
+                Paragraph(f"<b>Dato Histórico / Leyenda</b><br/>"
+                          f"<font size=7 color='#6B7280'>[REF: {ref_id}]</font><br/>"
+                          f"<font size=6.5 color='{color_subtitulo}'>{subtitulo}</font>", col_meta_style),
+                Paragraph(f"<b>{dh.titulo}</b> ({dh.epoca_o_ano or 'Histórico'}):<br/>{contenido_limpio}", col_spanish_style),
+                _bloque_miskito(traduccion_dh, "[ Traducción de título e historia al Miskito ]", num_lineas=lineas_dh, line_height=22)
+            ])
+        else:
+            bloques_miq = dividir_texto_en_bloques(str(traduccion_dh).strip(), max_chars=max_chars) if (traduccion_dh and str(traduccion_dh).strip()) else []
+            for i, b_dh in enumerate(bloques_dh):
+                num_parte = f"(Parte {i+1}/{total_partes})"
+                ref_parte = f"{ref_id}:p{i+1}"
+                if bloques_miq:
+                    val_miq = bloques_miq[i] if i < len(bloques_miq) else "(Traducción en parte anterior)"
+                else:
+                    val_miq = None
+
+                lineas_dh = 6 if len(b_dh) > 220 else 5
+                prompt_p = f"[ Traducción de historia al Miskito {num_parte} ]"
+                titulo_prefijo = f"<b>{dh.titulo}</b> ({dh.epoca_o_ano or 'Histórico'}):<br/>" if i == 0 else f"<b>{dh.titulo} ({num_parte})</b>:<br/>"
+
+                filas_destino.append([
+                    Paragraph(f"<b>Dato Histórico {num_parte}</b><br/>"
+                              f"<font size=7 color='#6B7280'>[REF: {ref_parte}]</font><br/>"
+                              f"<font size=6.5 color='{color_subtitulo}'>{subtitulo}</font>", col_meta_style),
+                    Paragraph(f"{titulo_prefijo}{b_dh}", col_spanish_style),
+                    _bloque_miskito(val_miq, prompt_p, num_lineas=lineas_dh, line_height=22)
+                ])
+
     def _generar_bloque_agradecimiento():
         agradecimiento_estilo_titulo = ParagraphStyle(
             'AgradecimientoTitulo',
@@ -924,28 +1082,30 @@ def generar_pdf_traduccion_miskito(ciudades_ids=None, buffer_destino=None, solo_
             ])
 
         if not solo_pendientes or c_info['descripcion_pendiente']:
-            lineas_desc = 7 if (ciudad.descripcion and len(ciudad.descripcion) > 220) else 6
-            filas_ciudad.append([
-                Paragraph(f"<b>Descripción Cultural</b><br/>"
-                          f"<font size=7 color='#6B7280'>[REF: CIUDAD:{ciudad.id}:descripcion_miq]</font><br/>"
-                          f"<font size=6.5 color='#92400E'>Resumen general cultural</font><br/>"
-                          f"{'<font size=6.5 color=\"#DC2626\">● Pendiente</font>' if c_info['descripcion_pendiente'] else '<font size=6.5 color=\"#059669\">✓ Traducido</font>'}", col_meta_style),
-                Paragraph(ciudad.descripcion or "<i>Sin descripción registrada</i>", col_spanish_style),
-                _bloque_miskito(ciudad.descripcion_miq, "[ Escribir traducción al Miskito de la descripción ]", num_lineas=lineas_desc, line_height=22)
-            ])
+            _agregar_filas_texto_extenso(
+                filas_destino=filas_ciudad,
+                titulo_campo="Descripción Cultural",
+                subtitulo_campo="Resumen general cultural",
+                ref_id=f"CIUDAD:{ciudad.id}:descripcion_miq",
+                es_pendiente=c_info['descripcion_pendiente'],
+                texto_original=ciudad.descripcion,
+                texto_traducido=ciudad.descripcion_miq,
+                prompt_guia="[ Escribir traducción al Miskito de la descripción ]",
+                color_subtitulo="#92400E"
+            )
 
         # Datos Históricos generales de la ciudad
         for dh_dict in c_info['datos_historicos']:
             dh = dh_dict['objeto']
             traduccion_dh = (dh.titulo_miq + "<br/>" + dh.contenido_miq) if (dh.titulo_miq and dh.contenido_miq) else (dh.contenido_miq or dh.titulo_miq)
-            lineas_dh = 7 if (dh.contenido and len(dh.contenido) > 220) else 6
-            filas_ciudad.append([
-                Paragraph(f"<b>Dato Histórico / Leyenda</b><br/>"
-                          f"<font size=7 color='#6B7280'>[REF: DATO:{dh.id}:titulo_miq & contenido_miq]</font><br/>"
-                          f"<font size=6.5 color='#92400E'>Tipo: {dh.tipo}</font>", col_meta_style),
-                Paragraph(f"<b>{dh.titulo}</b> ({dh.epoca_o_ano or 'Histórico'}):<br/>{dh.contenido}", col_spanish_style),
-                _bloque_miskito(traduccion_dh, "[ Traducción de título e historia al Miskito ]", num_lineas=lineas_dh, line_height=22)
-            ])
+            _agregar_filas_dato_historico(
+                filas_destino=filas_ciudad,
+                dh=dh,
+                traduccion_dh=traduccion_dh,
+                ref_id=f"DATO:{dh.id}:titulo_miq & contenido_miq",
+                subtitulo=f"Tipo: {dh.tipo}",
+                color_subtitulo="#92400E"
+            )
 
         if len(filas_ciudad) > 1:
             t_ciudad = Table(filas_ciudad, colWidths=col_widths_traduccion)
@@ -1021,15 +1181,17 @@ def generar_pdf_traduccion_miskito(ciudades_ids=None, buffer_destino=None, solo_
                     ])
 
                 if not solo_pendientes or ev_info['descripcion_pendiente']:
-                    lineas_ev = 7 if (ev.descripcion and len(ev.descripcion) > 220) else 6
-                    filas_evento.append([
-                        Paragraph(f"<b>Descripción del Evento</b><br/>"
-                                  f"<font size=7 color='#6B7280'>[REF: EVENTO:{ev.id}:descripcion_miq]</font><br/>"
-                                  f"<font size=6.5 color='#6D28D9'>Contexto de la festividad</font><br/>"
-                                  f"{'<font size=6.5 color=\"#DC2626\">● Pendiente</font>' if ev_info['descripcion_pendiente'] else '<font size=6.5 color=\"#059669\">✓ Traducido</font>'}", col_meta_style),
-                        Paragraph(ev.descripcion or "<i>Sin descripción</i>", col_spanish_style),
-                        _bloque_miskito(ev.descripcion_miq, "[ Escribir traducción al Miskito de la festividad ]", num_lineas=lineas_ev, line_height=22)
-                    ])
+                    _agregar_filas_texto_extenso(
+                        filas_destino=filas_evento,
+                        titulo_campo="Descripción del Evento",
+                        subtitulo_campo="Contexto de la festividad",
+                        ref_id=f"EVENTO:{ev.id}:descripcion_miq",
+                        es_pendiente=ev_info['descripcion_pendiente'],
+                        texto_original=ev.descripcion,
+                        texto_traducido=ev.descripcion_miq,
+                        prompt_guia="[ Escribir traducción al Miskito de la festividad ]",
+                        color_subtitulo="#6D28D9"
+                    )
 
                 if len(filas_evento) > 1:
                     t_evento = Table(filas_evento, colWidths=col_widths_traduccion)
@@ -1045,7 +1207,7 @@ def generar_pdf_traduccion_miskito(ciudades_ids=None, buffer_destino=None, solo_
                         ('RIGHTPADDING', (0, 0), (-1, -1), 6),
                         ('VALIGN', (0, 0), (-1, -1), 'TOP'),
                     ]))
-                    story.append(KeepTogether(t_evento))
+                    story.append(t_evento)
                     story.append(Spacer(1, 4))
 
         # =====================================================================
@@ -1092,15 +1254,17 @@ def generar_pdf_traduccion_miskito(ciudades_ids=None, buffer_destino=None, solo_
                 ])
 
             if not solo_pendientes or cir_info['descripcion_pendiente']:
-                lineas_cir = 7 if (circuito.descripcion and len(circuito.descripcion) > 220) else 6
-                filas_circuito.append([
-                    Paragraph(f"<b>Descripción del Recorrido</b><br/>"
-                              f"<font size=7 color='#6B7280'>[REF: CIRCUITO:{circuito.id}:descripcion_miq]</font><br/>"
-                              f"<font size=6.5 color='#92400E'>Contexto temático de la ruta</font><br/>"
-                              f"{'<font size=6.5 color=\"#DC2626\">● Pendiente</font>' if cir_info['descripcion_pendiente'] else '<font size=6.5 color=\"#059669\">✓ Traducido</font>'}", col_meta_style),
-                    Paragraph(circuito.descripcion or "<i>Sin descripción</i>", col_spanish_style),
-                    _bloque_miskito(circuito.descripcion_miq, "[ Escribir descripción del circuito en Miskito ]", num_lineas=lineas_cir, line_height=22)
-                ])
+                _agregar_filas_texto_extenso(
+                    filas_destino=filas_circuito,
+                    titulo_campo="Descripción del Recorrido",
+                    subtitulo_campo="Contexto temático de la ruta",
+                    ref_id=f"CIRCUITO:{circuito.id}:descripcion_miq",
+                    es_pendiente=cir_info['descripcion_pendiente'],
+                    texto_original=circuito.descripcion,
+                    texto_traducido=circuito.descripcion_miq,
+                    prompt_guia="[ Escribir descripción del circuito en Miskito ]",
+                    color_subtitulo="#92400E"
+                )
 
             if len(filas_circuito) > 1:
                 t_circuito = Table(filas_circuito, colWidths=col_widths_traduccion)
@@ -1140,27 +1304,30 @@ def generar_pdf_traduccion_miskito(ciudades_ids=None, buffer_destino=None, solo_
                         ])
 
                     if not solo_pendientes or p_info['descripcion_pendiente']:
-                        lineas_p = 7 if (p.descripcion and len(p.descripcion) > 220) else 6
-                        filas_punto.append([
-                            Paragraph(f"<b>Descripción del Atractivo</b><br/>"
-                                      f"<font size=7 color='#6B7280'>[REF: PUNTO:{p.id}:descripcion_miq]</font><br/>"
-                                      f"<font size=6.5 color='#0F766E'>Explicación de qué se hace o aprecia aquí</font><br/>"
-                                      f"{'<font size=6.5 color=\"#DC2626\">● Descripción pendiente</font>' if p_info['descripcion_pendiente'] else '<font size=6.5 color=\"#059669\">✓ Traducido</font>'}", col_meta_style),
-                            Paragraph(p.descripcion or "<i>Sin descripción</i>", col_spanish_style),
-                            _bloque_miskito(p.descripcion_miq, "[ Traducción al Miskito del atractivo y actividades ]", num_lineas=lineas_p, line_height=22)
-                        ])
+                        _agregar_filas_texto_extenso(
+                            filas_destino=filas_punto,
+                            titulo_campo="Descripción del Atractivo",
+                            subtitulo_campo="Explicación de qué se hace o aprecia aquí",
+                            ref_id=f"PUNTO:{p.id}:descripcion_miq",
+                            es_pendiente=p_info['descripcion_pendiente'],
+                            texto_original=p.descripcion,
+                            texto_traducido=p.descripcion_miq,
+                            prompt_guia="[ Traducción al Miskito del atractivo y actividades ]",
+                            color_subtitulo="#0F766E"
+                        )
 
                     # Datos históricos del punto
                     for dh_p_dict in p_info['datos_historicos']:
                         dh_p = dh_p_dict['objeto']
                         traduccion_dhp = (dh_p.titulo_miq + "<br/>" + dh_p.contenido_miq) if (dh_p.titulo_miq and dh_p.contenido_miq) else (dh_p.contenido_miq or dh_p.titulo_miq)
-                        lineas_dhp = 7 if (dh_p.contenido and len(dh_p.contenido) > 220) else 6
-                        filas_punto.append([
-                            Paragraph(f"<b>Dato / Tradición</b><br/>"
-                                      f"<font size=7 color='#6B7280'>[REF: DATO:{dh_p.id}:titulo_miq & contenido_miq]<br/>Tipo: {dh_p.tipo}</font>", col_meta_style),
-                            Paragraph(f"<b>{dh_p.titulo}</b>:<br/>{dh_p.contenido}", col_spanish_style),
-                            _bloque_miskito(traduccion_dhp, "[ Traducción de leyenda o tradición al Miskito ]", num_lineas=lineas_dhp, line_height=22)
-                        ])
+                        _agregar_filas_dato_historico(
+                            filas_destino=filas_punto,
+                            dh=dh_p,
+                            traduccion_dh=traduccion_dhp,
+                            ref_id=f"DATO:{dh_p.id}:titulo_miq & contenido_miq",
+                            subtitulo=f"Tipo: {dh_p.tipo}",
+                            color_subtitulo="#0F766E"
+                        )
 
                     if len(filas_punto) > 0:
                         t_punto = Table(filas_punto, colWidths=col_widths_traduccion)
@@ -1175,7 +1342,7 @@ def generar_pdf_traduccion_miskito(ciudades_ids=None, buffer_destino=None, solo_
                             ('RIGHTPADDING', (0, 0), (-1, -1), 6),
                             ('VALIGN', (0, 0), (-1, -1), 'TOP'),
                         ]))
-                        story.append(KeepTogether(t_punto))
+                        story.append(t_punto)
                         story.append(Spacer(1, 4))
 
             story.append(Spacer(1, 6))
@@ -1232,15 +1399,17 @@ def generar_pdf_traduccion_miskito(ciudades_ids=None, buffer_destino=None, solo_
                     _bloque_miskito(ev.rango_celebracion_miq, "[ Escribir rango/fecha en Miskito ]", num_lineas=2, line_height=23)
                 ])
             if not solo_pendientes or ev_g_info['descripcion_pendiente']:
-                lineas_evg = 7 if (ev.descripcion and len(ev.descripcion) > 220) else 6
-                filas_ev_g.append([
-                    Paragraph(f"<b>Descripción del Evento</b><br/>"
-                              f"<font size=7 color='#6B7280'>[REF: EVENTO:{ev.id}:descripcion_miq]</font><br/>"
-                              f"<font size=6.5 color='#6D28D9'>Contexto de la festividad</font><br/>"
-                              f"{'<font size=6.5 color=\"#DC2626\">● Pendiente</font>' if ev_g_info['descripcion_pendiente'] else '<font size=6.5 color=\"#059669\">✓ Traducido</font>'}", col_meta_style),
-                    Paragraph(ev.descripcion or "<i>Sin descripción</i>", col_spanish_style),
-                    _bloque_miskito(ev.descripcion_miq, "[ Escribir traducción al Miskito de la festividad ]", num_lineas=lineas_evg, line_height=22)
-                ])
+                _agregar_filas_texto_extenso(
+                    filas_destino=filas_ev_g,
+                    titulo_campo="Descripción del Evento",
+                    subtitulo_campo="Contexto de la festividad",
+                    ref_id=f"EVENTO:{ev.id}:descripcion_miq",
+                    es_pendiente=ev_g_info['descripcion_pendiente'],
+                    texto_original=ev.descripcion,
+                    texto_traducido=ev.descripcion_miq,
+                    prompt_guia="[ Escribir traducción al Miskito de la festividad ]",
+                    color_subtitulo="#6D28D9"
+                )
 
             if len(filas_ev_g) > 1:
                 t_ev_g = Table(filas_ev_g, colWidths=col_widths_traduccion)
@@ -1256,7 +1425,7 @@ def generar_pdf_traduccion_miskito(ciudades_ids=None, buffer_destino=None, solo_
                     ('RIGHTPADDING', (0, 0), (-1, -1), 6),
                     ('VALIGN', (0, 0), (-1, -1), 'TOP'),
                 ]))
-                story.append(KeepTogether(t_ev_g))
+                story.append(t_ev_g)
                 story.append(Spacer(1, 4))
 
     # =========================================================================
