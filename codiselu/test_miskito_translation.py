@@ -210,3 +210,63 @@ class MiskitoTranslationTests(TestCase):
         pdf_completado = generar_pdf_traduccion_miskito(solo_pendientes=True)
         self.assertTrue(pdf_completado.getvalue().startswith(b'%PDF'))
 
+    def test_exportar_pdf_horizontal_generacion_y_agradecimiento(self):
+        """Verifica que el servicio genere el PDF en formato horizontal correctamente."""
+        # Marcar un punto como pendiente de traducción
+        self.punto.nombre_miq = ""
+        self.punto.save()
+
+        pdf_horiz = generar_pdf_traduccion_miskito(orientacion='horizontal', solo_pendientes=True)
+        pdf_content = pdf_horiz.getvalue()
+
+        self.assertTrue(pdf_content.startswith(b'%PDF'))
+        self.assertGreater(len(pdf_content), 1500)
+
+        # Verificar también que la versión vertical se genera correctamente
+        pdf_vert = generar_pdf_traduccion_miskito(orientacion='vertical', solo_pendientes=True)
+        self.assertTrue(pdf_vert.getvalue().startswith(b'%PDF'))
+        self.assertGreater(len(pdf_vert.getvalue()), 1500)
+
+    def test_admin_export_horizontal_view(self):
+        """Verifica que la vista del admin genere el PDF horizontal con el nombre de archivo apropiado."""
+        client = Client()
+        client.force_login(self.admin_user)
+        url = reverse('admin:codiselu_ciudad_exportar_miskito')
+        resp = client.get(f"{url}?solo_pendientes=1&orientacion=horizontal")
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp['Content-Type'], 'application/pdf')
+        self.assertIn('Horizontal', resp['Content-Disposition'])
+
+    def test_admin_action_exportar_horizontal(self):
+        """Verifica la acción de administración para exportar ciudades seleccionadas en formato horizontal."""
+        from codiselu.admin import CiudadAdmin
+        from django.contrib.admin.sites import AdminSite
+
+        site = AdminSite()
+        admin_obj = CiudadAdmin(Ciudad, site)
+        factory = APIRequestFactory()
+        req = factory.get('/')
+        req.user = self.admin_user
+
+        qs = Ciudad.objects.filter(id=self.ciudad_con_circuito.id)
+        resp = admin_obj.exportar_a_pdf_miskito_horizontal(req, qs)
+        self.assertIsNotNone(resp)
+        self.assertEqual(resp['Content-Type'], 'application/pdf')
+        self.assertIn('Horizontal', resp['Content-Disposition'])
+
+    def test_api_endpoints_aceptan_orientacion_horizontal(self):
+        """Verifica que los endpoints REST acepten ?orientacion=horizontal y devuelvan el PDF correspondiente."""
+        client = APIClient()
+
+        # Endpoint viewset
+        resp1 = client.get('/api/ciudades/exportar-miskito-pdf/?orientacion=horizontal')
+        self.assertEqual(resp1.status_code, 200)
+        self.assertEqual(resp1['Content-Type'], 'application/pdf')
+        self.assertIn('Horizontal', resp1['Content-Disposition'])
+
+        # Endpoint directo APIView
+        resp2 = client.get('/api/exportar-miskito-pdf/?orientacion=horizontal')
+        self.assertEqual(resp2.status_code, 200)
+        self.assertEqual(resp2['Content-Type'], 'application/pdf')
+        self.assertIn('Horizontal', resp2['Content-Disposition'])
+

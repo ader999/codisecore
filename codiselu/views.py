@@ -274,8 +274,14 @@ class CiudadViewSet(viewsets.ModelViewSet):
         param_pend = request.query_params.get('solo_pendientes', request.query_params.get('pendientes', '1'))
         solo_pend = str(param_pend).lower() not in ('0', 'false', 'no')
 
-        pdf_buffer = generar_pdf_traduccion_miskito(ciudades_ids=ciudades_ids, solo_pendientes=solo_pend)
-        nombre_archivo = "Codice_Guia_Traduccion_Miskito_Pendientes.pdf" if solo_pend else "Codice_Guia_Traduccion_Miskito_Completo.pdf"
+        param_orient = request.query_params.get('orientacion', request.query_params.get('formato', 'vertical')).lower()
+        if request.query_params.get('horizontal', '').lower() in ('1', 'true', 'yes'):
+            param_orient = 'horizontal'
+        es_horiz = param_orient in ('horizontal', 'landscape', 'h')
+
+        pdf_buffer = generar_pdf_traduccion_miskito(ciudades_ids=ciudades_ids, solo_pendientes=solo_pend, orientacion=param_orient)
+        sufijo_orient = "_Horizontal" if es_horiz else ""
+        nombre_archivo = f"Codice_Guia_Traduccion_Miskito_{'Pendientes' if solo_pend else 'Completo'}{sufijo_orient}.pdf"
         response = FileResponse(pdf_buffer, content_type='application/pdf')
         response['Content-Disposition'] = f'attachment; filename="{nombre_archivo}"'
         return response
@@ -302,8 +308,14 @@ class ExportarMiskitoPDFView(APIView):
         param_pend = request.query_params.get('solo_pendientes', request.query_params.get('pendientes', '1'))
         solo_pend = str(param_pend).lower() not in ('0', 'false', 'no')
 
-        pdf_buffer = generar_pdf_traduccion_miskito(ciudades_ids=ciudades_ids, solo_pendientes=solo_pend)
-        nombre_archivo = "Codice_Guia_Traduccion_Miskito_Pendientes.pdf" if solo_pend else "Codice_Guia_Traduccion_Miskito_Completo.pdf"
+        param_orient = request.query_params.get('orientacion', request.query_params.get('formato', 'vertical')).lower()
+        if request.query_params.get('horizontal', '').lower() in ('1', 'true', 'yes'):
+            param_orient = 'horizontal'
+        es_horiz = param_orient in ('horizontal', 'landscape', 'h')
+
+        pdf_buffer = generar_pdf_traduccion_miskito(ciudades_ids=ciudades_ids, solo_pendientes=solo_pend, orientacion=param_orient)
+        sufijo_orient = "_Horizontal" if es_horiz else ""
+        nombre_archivo = f"Codice_Guia_Traduccion_Miskito_{'Pendientes' if solo_pend else 'Completo'}{sufijo_orient}.pdf"
         response = FileResponse(pdf_buffer, content_type='application/pdf')
         response['Content-Disposition'] = f'attachment; filename="{nombre_archivo}"'
         return response

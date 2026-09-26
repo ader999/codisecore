@@ -3,6 +3,14 @@
 
 {% block object-tools-items %}
   <li>
+    <a href="{% url 'admin:codiselu_ciudad_exportar_miskito' %}?solo_pendientes=1&orientacion=horizontal"
+       style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: #ffffff !important; font-weight: 700; border-radius: 6px; padding: 6px 14px; display: inline-flex; align-items: center; gap: 6px; text-decoration: none; box-shadow: 0 2px 4px rgba(16, 185, 129, 0.4); border: none;"
+       title="Exportar PDF en formato horizontal (apaisado) con columna de traducción al Miskito ampliada para facilitar la escritura manual del traductor">
+      <span style="font-size: 14px;">📐</span>
+      <span>PDF Miskito Horizontal (Traductores)</span>
+    </a>
+  </li>
+  <li>
     <a href="{% url 'admin:codiselu_ciudad_exportar_miskito' %}?solo_pendientes=1"
        style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: #111827 !important; font-weight: 700; border-radius: 6px; padding: 6px 14px; display: inline-flex; align-items: center; gap: 6px; text-decoration: none; box-shadow: 0 2px 4px rgba(245, 158, 11, 0.35); border: none;"
        title="Exportar PDF conteniendo únicamente los textos que aún no han sido traducidos al Miskito (Solo ciudades con circuitos)">
