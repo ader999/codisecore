@@ -256,8 +256,11 @@ codisecore/
 │   └── default.conf               # Reglas de proxy reverso, timeouts y buffers
 ├── static/                        # Archivos estaticos fuente del proyecto
 ├── staticfiles/                   # Directorio destino de assets recolectados (collectstatic)
+├── docs/                          # Centro de documentacion tecnica y modulos de la API
+│   ├── README.md                  # Indice central de la documentacion
+│   └── api/                       # Guias modulares de integracion de la API (11 secciones)
 ├── CONTEXTO_PROYECTO.md           # Documento de contexto del reto y alcance funcional
-├── GUIA_CONEXION_API.md           # Guia de integracion para desarrolladores frontend/movil
+├── GUIA_CONEXION_API.md           # Portal de enlace a las guias modulares de la API
 ├── Dockerfile                     # Construccion multi-stage de la imagen Docker de produccion
 ├── docker-compose.yml             # Orquestacion de servicios (web, nginx, volumenes)
 ├── entrypoint.sh                  # Script de inicio del contenedor (migraciones automaticas)

@@ -385,6 +385,44 @@ class CircuitoCreativoViewSet(viewsets.ModelViewSet):
     serializer_class = CircuitoCreativoSerializer
     permission_classes = [permissions.AllowAny]
 
+    def get_queryset(self):
+        qs = super().get_queryset()
+        ciudad_id = self.request.query_params.get('ciudad')
+        if ciudad_id:
+            qs = qs.filter(ciudad_id=ciudad_id)
+        return qs
+
+    @action(detail=True, methods=['get'], url_path='empresas')
+    def empresas(self, request, pk=None):
+        """
+        GET /api/circuitos/{id}/empresas/
+        Retorna las empresas recomendadas para el circuito turístico:
+        - Empresas en la ruta física (por defecto a <= 800m).
+        - Empresas patrocinadas con pauta activa (por defecto a <= 5000m o vinculadas al circuito).
+        Parámetros opcionales:
+        - ?radio_metros=800
+        - ?radio_patrocinado_metros=5000
+        """
+        circuito = self.get_object()
+        try:
+            radio = float(request.query_params.get('radio_metros', 800))
+        except (ValueError, TypeError):
+            radio = 800
+        try:
+            radio_patrocinado = float(request.query_params.get('radio_patrocinado_metros', 5000))
+        except (ValueError, TypeError):
+            radio_patrocinado = 5000
+
+        from .circuito_service import obtener_empresas_en_ruta_circuito
+        empresas = obtener_empresas_en_ruta_circuito(
+            circuito,
+            radio_metros=radio,
+            radio_patrocinado_metros=radio_patrocinado
+        )
+        from .serializers import EmpresaEnCircuitoSerializer
+        serializer = EmpresaEnCircuitoSerializer(empresas, many=True, context={'request': request})
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
 
 class PuntoInteresViewSet(viewsets.ModelViewSet):
     queryset = PuntoInteres.objects.all().order_by('orden')

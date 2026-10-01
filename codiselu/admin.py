@@ -334,17 +334,23 @@ class EmpresaMiembroInline(admin.TabularInline):
 
 @admin.register(Empresa)
 class EmpresaAdmin(OcultarTraduccionesAlCrearMixin, admin.ModelAdmin):
-    list_display = ('id', 'nombre', 'usuario', 'categoria', 'ciudad', 'acepta_inversiones', 'fecha_creacion')
-    list_filter = ('acepta_inversiones', 'categoria', 'ciudad')
-    search_fields = ('nombre', 'nombre_en', 'nombre_zh', 'descripcion', 'usuario__username')
+    list_display = ('id', 'nombre', 'usuario', 'categoria', 'ciudad', 'numero_whatsapp', 'tiene_publicidad', 'acepta_inversiones', 'fecha_creacion')
+    list_filter = ('tiene_publicidad', 'acepta_inversiones', 'categoria', 'ciudad')
+    search_fields = ('nombre', 'nombre_en', 'nombre_zh', 'descripcion', 'usuario__username', 'numero_whatsapp')
+    filter_horizontal = ('circuitos',)
     inlines = [EmpresaMiembroInline, OportunidadInversionInline]
     fieldsets = (
         ('Información General (Español)', {
             'fields': (
                 'usuario', 'ciudad', 'punto_interes', 'nombre', 'descripcion',
-                'categoria', 'direccion', 'telefono_contacto', 'email_contacto',
-                'sitio_web', 'imagen_portada', 'latitud', 'longitud', 'acepta_inversiones'
+                'categoria', 'direccion', 'telefono_contacto', 'numero_whatsapp',
+                'email_contacto', 'sitio_web', 'imagen_portada', 'latitud', 'longitud',
+                'acepta_inversiones'
             )
+        }),
+        ('Pauta Publicitaria y Circuitos', {
+            'fields': ('tiene_publicidad', 'fecha_fin_publicidad', 'circuitos'),
+            'description': 'Configura si la empresa cuenta con patrocinio para ser destacada en circuitos turísticos.'
         }),
         ('Traducción al Inglés (Auto / Editable)', {
             'fields': ('nombre_en', 'descripcion_en'),
