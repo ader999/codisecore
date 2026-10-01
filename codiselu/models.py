@@ -217,12 +217,16 @@ class Empresa(models.Model):
     categoria = models.CharField(max_length=50, choices=TIPO_EMPRESA_CHOICES, default='Destino')
     direccion = models.CharField(max_length=255, blank=True, null=True)
     telefono_contacto = models.CharField(max_length=20, blank=True, null=True)
+    numero_whatsapp = models.CharField(max_length=20, blank=True, null=True, help_text="Número internacional de WhatsApp (ej: +50588888888)")
     email_contacto = models.EmailField(blank=True, null=True)
     sitio_web = models.URLField(blank=True, null=True)
     imagen_portada = models.ImageField(upload_to='empresas/portadas/', blank=True, null=True)
     latitud = models.FloatField(null=True, blank=True)
     longitud = models.FloatField(null=True, blank=True)
     acepta_inversiones = models.BooleanField(default=False, help_text="Indica si esta empresa o destino turístico acepta ofertas o proyectos de inversión")
+    tiene_publicidad = models.BooleanField(default=False, help_text="Indica si la empresa cuenta con pauta publicitaria activa")
+    fecha_fin_publicidad = models.DateField(null=True, blank=True, help_text="Fecha de vencimiento de la pauta publicitaria")
+    circuitos = models.ManyToManyField('CircuitoCreativo', blank=True, related_name='empresas_asociadas', help_text="Circuitos creativos donde la empresa tiene presencia o patrocinio")
     fecha_creacion = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -231,6 +235,22 @@ class Empresa(models.Model):
 
     def __str__(self):
         return f"{self.nombre} ({self.usuario.username})"
+
+    @property
+    def link_whatsapp(self):
+        if not self.numero_whatsapp:
+            return None
+        limpio = ''.join(filter(str.isdigit, str(self.numero_whatsapp)))
+        return f"https://wa.me/{limpio}" if limpio else None
+
+    @property
+    def tiene_publicidad_activa(self):
+        from django.utils import timezone
+        if not self.tiene_publicidad:
+            return False
+        if self.fecha_fin_publicidad:
+            return self.fecha_fin_publicidad >= timezone.now().date()
+        return True
 
     def save(self, *args, **kwargs):
         from .translation_service import auto_completar_traducciones

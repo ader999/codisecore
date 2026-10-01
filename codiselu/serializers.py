@@ -426,17 +426,47 @@ class PuntoInteresSerializer(TraduccionSerializerMixin, serializers.ModelSeriali
         ]
 
 
+class EmpresaEnCircuitoSerializer(TraduccionSerializerMixin, serializers.ModelSerializer):
+    """
+    Serializador de empresas en ruta o patrocinadas dentro de un Circuito Creativo.
+    """
+    ciudad_nombre = serializers.ReadOnlyField(source='ciudad.nombre')
+    link_whatsapp = serializers.ReadOnlyField()
+    es_patrocinada = serializers.BooleanField(read_only=True)
+    en_ruta = serializers.BooleanField(read_only=True)
+    distancia_metros = serializers.FloatField(read_only=True)
+    punto_cercano_nombre = serializers.CharField(read_only=True)
+
+    class Meta:
+        model = Empresa
+        fields = [
+            'id', 'nombre', 'descripcion', 'categoria', 'direccion',
+            'telefono_contacto', 'numero_whatsapp', 'link_whatsapp',
+            'email_contacto', 'sitio_web', 'imagen_portada',
+            'ciudad', 'ciudad_nombre', 'latitud', 'longitud',
+            'acepta_inversiones', 'es_patrocinada', 'en_ruta',
+            'distancia_metros', 'punto_cercano_nombre'
+        ]
+
+
 class CircuitoCreativoSerializer(TraduccionSerializerMixin, serializers.ModelSerializer):
     ciudad_nombre = serializers.ReadOnlyField(source='ciudad.nombre')
     puntos_interes = PuntoInteresSerializer(many=True, read_only=True)
+    empresas_en_ruta = serializers.SerializerMethodField()
 
     class Meta:
         model = CircuitoCreativo
         fields = [
             'id', 'ciudad', 'ciudad_nombre', 'nombre', 'descripcion',
             'distancia_km', 'duracion_estimada', 'dificultad', 'imagen_mapa',
-            'puntos_interes'
+            'puntos_interes', 'empresas_en_ruta'
         ]
+
+    def get_empresas_en_ruta(self, obj):
+        from .circuito_service import obtener_empresas_en_ruta_circuito
+        empresas = obtener_empresas_en_ruta_circuito(obj)
+        serializer = EmpresaEnCircuitoSerializer(empresas, many=True, context=self.context)
+        return serializer.data
 
 
 class CiudadSerializer(TraduccionSerializerMixin, serializers.ModelSerializer):
@@ -532,17 +562,21 @@ class EmpresaSerializer(TraduccionSerializerMixin, serializers.ModelSerializer):
     usuario_username = serializers.ReadOnlyField(source='usuario.username')
     ciudad_nombre = serializers.ReadOnlyField(source='ciudad.nombre')
     punto_interes_nombre = serializers.ReadOnlyField(source='punto_interes.nombre')
+    link_whatsapp = serializers.ReadOnlyField()
+    tiene_publicidad_activa = serializers.ReadOnlyField()
 
     class Meta:
         model = Empresa
         fields = [
             'id', 'usuario', 'usuario_username', 'ciudad', 'ciudad_nombre',
             'punto_interes', 'punto_interes_nombre', 'nombre', 'descripcion',
-            'categoria', 'direccion', 'telefono_contacto', 'email_contacto',
-            'sitio_web', 'imagen_portada', 'latitud', 'longitud',
-            'acepta_inversiones', 'fecha_creacion'
+            'categoria', 'direccion', 'telefono_contacto', 'numero_whatsapp',
+            'link_whatsapp', 'email_contacto', 'sitio_web', 'imagen_portada',
+            'latitud', 'longitud', 'acepta_inversiones', 'tiene_publicidad',
+            'fecha_fin_publicidad', 'tiene_publicidad_activa', 'circuitos',
+            'fecha_creacion'
         ]
-        read_only_fields = ['id', 'usuario', 'usuario_username', 'fecha_creacion']
+        read_only_fields = ['id', 'usuario', 'usuario_username', 'link_whatsapp', 'tiene_publicidad_activa', 'fecha_creacion']
 
 
 class EmpresaMiembroSerializer(serializers.ModelSerializer):
@@ -567,6 +601,8 @@ class MiEmpresaSerializer(serializers.ModelSerializer):
     Serializador para listar las empresas a las que pertenece el usuario autenticado (para cambio de contexto).
     """
     ciudad_nombre = serializers.ReadOnlyField(source='ciudad.nombre')
+    link_whatsapp = serializers.ReadOnlyField()
+    tiene_publicidad_activa = serializers.ReadOnlyField()
     rol = serializers.SerializerMethodField()
     fecha_incorporacion = serializers.SerializerMethodField()
 
@@ -574,9 +610,11 @@ class MiEmpresaSerializer(serializers.ModelSerializer):
         model = Empresa
         fields = [
             'id', 'nombre', 'descripcion', 'categoria', 'direccion',
-            'telefono_contacto', 'email_contacto', 'sitio_web',
-            'imagen_portada', 'ciudad', 'ciudad_nombre', 'latitud', 'longitud',
-            'acepta_inversiones', 'rol', 'fecha_incorporacion', 'fecha_creacion'
+            'telefono_contacto', 'numero_whatsapp', 'link_whatsapp',
+            'email_contacto', 'sitio_web', 'imagen_portada',
+            'ciudad', 'ciudad_nombre', 'latitud', 'longitud',
+            'acepta_inversiones', 'tiene_publicidad', 'fecha_fin_publicidad',
+            'tiene_publicidad_activa', 'rol', 'fecha_incorporacion', 'fecha_creacion'
         ]
 
     def get_rol(self, obj):
