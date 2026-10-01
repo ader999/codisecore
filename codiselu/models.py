@@ -235,7 +235,47 @@ class Empresa(models.Model):
     def save(self, *args, **kwargs):
         from .translation_service import auto_completar_traducciones
         auto_completar_traducciones(self, ['nombre', 'descripcion'])
+        es_nueva = self.pk is None
         super().save(*args, **kwargs)
+
+        if es_nueva and self.usuario_id:
+            # Asignar automáticamente al creador como OWNER de la empresa
+            EmpresaMiembro.objects.get_or_create(
+                usuario=self.usuario,
+                empresa=self,
+                defaults={'rol': EmpresaMiembro.ROL_OWNER}
+            )
+            # Asegurar que el usuario adquiera la condición de protagonista
+            if not self.usuario.es_protagonista:
+                self.usuario.es_protagonista = True
+                self.usuario.save(update_fields=['es_protagonista'])
+
+
+class EmpresaMiembro(models.Model):
+    ROL_OWNER = 'OWNER'
+    ROL_ADMIN = 'ADMIN'
+    ROL_EDITOR = 'EDITOR'
+
+    ROL_CHOICES = [
+        (ROL_OWNER, 'Propietario'),
+        (ROL_ADMIN, 'Administrador'),
+        (ROL_EDITOR, 'Editor'),
+    ]
+
+    usuario = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='membresias_empresa')
+    empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name='miembros')
+    rol = models.CharField(max_length=20, choices=ROL_CHOICES, default=ROL_EDITOR)
+    fecha_incorporacion = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'empresa_miembros'
+        unique_together = ('usuario', 'empresa')
+        ordering = ['-fecha_incorporacion']
+        verbose_name = "Miembro de Empresa"
+        verbose_name_plural = "Miembros de Empresas"
+
+    def __str__(self):
+        return f"{self.usuario.username} ({self.rol}) en {self.empresa.nombre}"
 
 
 class OportunidadInversion(models.Model):
@@ -392,8 +432,15 @@ class EventoAsistencia(models.Model):
 
 
 class Publicacion(models.Model):
-    autor = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='publicaciones')
+    TIPO_AUTOR_CHOICES = [
+        ('USUARIO', 'Usuario'),
+        ('EMPRESA', 'Empresa'),
+    ]
+
+    autor = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='publicaciones', null=True, blank=True)
+    creado_por = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='publicaciones_creadas', null=True, blank=True, help_text="Usuario real autenticado que realizó la publicación (auditoría)")
     empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, null=True, blank=True, related_name='publicaciones')
+    tipo_autor = models.CharField(max_length=20, choices=TIPO_AUTOR_CHOICES, default='USUARIO')
     ciudad = models.ForeignKey(Ciudad, on_delete=models.CASCADE, null=True, blank=True, related_name='publicaciones')
     evento = models.ForeignKey(Evento, on_delete=models.CASCADE, null=True, blank=True, related_name='publicaciones')
     titulo = models.CharField(max_length=200, blank=True, null=True)
@@ -417,8 +464,29 @@ class Publicacion(models.Model):
     def total_comentarios(self):
         return self.comentarios.filter(esta_activo=True).count()
 
+    def save(self, *args, **kwargs):
+        if not self.creado_por_id and self.autor_id:
+            self.creado_por = self.autor
+        elif not self.autor_id and self.creado_por_id:
+            self.autor = self.creado_por
+
+        if self.empresa_id:
+            self.tipo_autor = 'EMPRESA'
+        elif not self.tipo_autor:
+            self.tipo_autor = 'USUARIO'
+
+        super().save(*args, **kwargs)
+
     def __str__(self):
-        return f"Publicación de {self.autor.username} - {self.fecha_creacion.strftime('%Y-%m-%d')}"
+        if self.tipo_autor == 'EMPRESA' and self.empresa:
+            origen = self.empresa.nombre
+        elif self.creado_por:
+            origen = self.creado_por.username
+        elif self.autor:
+            origen = self.autor.username
+        else:
+            origen = "Anónimo"
+        return f"Publicación de {origen} ({self.tipo_autor}) - {self.fecha_creacion.strftime('%Y-%m-%d')}"
 
 
 class PublicacionImagen(models.Model):

@@ -11,7 +11,7 @@ from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError as DjangoValidationError
 from .models import (
     User, Ciudad, CircuitoCreativo, PuntoInteres, DatoHistorico,
-    GaleriaMultimedia, UsuarioPuntoVisitado, Empresa, OportunidadInversion,
+    GaleriaMultimedia, UsuarioPuntoVisitado, Empresa, EmpresaMiembro, OportunidadInversion,
     InversionTurista, Evento, EventoAsistencia, Publicacion, PublicacionImagen,
     ComentarioPublicacion
 )
@@ -545,6 +545,62 @@ class EmpresaSerializer(TraduccionSerializerMixin, serializers.ModelSerializer):
         read_only_fields = ['id', 'usuario', 'usuario_username', 'fecha_creacion']
 
 
+class EmpresaMiembroSerializer(serializers.ModelSerializer):
+    usuario_username = serializers.ReadOnlyField(source='usuario.username')
+    usuario_nombre = serializers.SerializerMethodField()
+    usuario_foto_perfil = serializers.ImageField(source='usuario.foto_perfil', read_only=True)
+
+    class Meta:
+        model = EmpresaMiembro
+        fields = [
+            'id', 'empresa', 'usuario', 'usuario_username',
+            'usuario_nombre', 'usuario_foto_perfil', 'rol', 'fecha_incorporacion'
+        ]
+        read_only_fields = ['id', 'empresa', 'fecha_incorporacion']
+
+    def get_usuario_nombre(self, obj):
+        return obj.usuario.get_full_name().strip() or obj.usuario.username
+
+
+class MiEmpresaSerializer(serializers.ModelSerializer):
+    """
+    Serializador para listar las empresas a las que pertenece el usuario autenticado (para cambio de contexto).
+    """
+    ciudad_nombre = serializers.ReadOnlyField(source='ciudad.nombre')
+    rol = serializers.SerializerMethodField()
+    fecha_incorporacion = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Empresa
+        fields = [
+            'id', 'nombre', 'descripcion', 'categoria', 'direccion',
+            'telefono_contacto', 'email_contacto', 'sitio_web',
+            'imagen_portada', 'ciudad', 'ciudad_nombre', 'latitud', 'longitud',
+            'acepta_inversiones', 'rol', 'fecha_incorporacion', 'fecha_creacion'
+        ]
+
+    def get_rol(self, obj):
+        if hasattr(obj, 'user_rol') and obj.user_rol:
+            return obj.user_rol
+        request = self.context.get('request')
+        if request and request.user and request.user.is_authenticated:
+            miembro = obj.miembros.filter(usuario=request.user).first()
+            if miembro:
+                return miembro.rol
+        return None
+
+    def get_fecha_incorporacion(self, obj):
+        if hasattr(obj, 'user_fecha_incorporacion') and obj.user_fecha_incorporacion:
+            return obj.user_fecha_incorporacion
+        request = self.context.get('request')
+        if request and request.user and request.user.is_authenticated:
+            miembro = obj.miembros.filter(usuario=request.user).first()
+            if miembro:
+                return miembro.fecha_incorporacion
+        return None
+
+
+
 class OportunidadInversionSerializer(TraduccionSerializerMixin, serializers.ModelSerializer):
     empresa_nombre = serializers.ReadOnlyField(source='empresa.nombre')
     empresa_acepta_inversiones = serializers.ReadOnlyField(source='empresa.acepta_inversiones')
@@ -622,9 +678,13 @@ class ComentarioPublicacionSerializer(serializers.ModelSerializer):
 
 class PublicacionSerializer(serializers.ModelSerializer):
     autor_username = serializers.ReadOnlyField(source='autor.username')
-    autor_foto_perfil = serializers.ImageField(source='autor.foto_perfil', read_only=True)
+    creado_por_username = serializers.ReadOnlyField(source='creado_por.username')
+    autor_nombre = serializers.SerializerMethodField()
+    autor_foto_perfil = serializers.SerializerMethodField()
     es_protagonista = serializers.ReadOnlyField(source='autor.es_protagonista')
-    empresa_nombre = serializers.ReadOnlyField(source='empresa.nombre')
+    empresa = serializers.PrimaryKeyRelatedField(queryset=Empresa.objects.all(), required=False, allow_null=True)
+    empresa_id = serializers.ReadOnlyField()
+    empresa_nombre = serializers.ReadOnlyField(source='empresa.nombre', default=None)
     ciudad_nombre = serializers.ReadOnlyField(source='ciudad.nombre')
     evento_titulo = serializers.ReadOnlyField(source='evento.titulo')
     imagenes = PublicacionImagenSerializer(many=True, read_only=True)
@@ -636,16 +696,47 @@ class PublicacionSerializer(serializers.ModelSerializer):
     class Meta:
         model = Publicacion
         fields = [
-            'id', 'autor', 'autor_username', 'autor_foto_perfil', 'es_protagonista',
-            'empresa', 'empresa_nombre', 'ciudad', 'ciudad_nombre',
+            'id', 'autor', 'autor_username', 'autor_nombre', 'autor_foto_perfil',
+            'creado_por', 'creado_por_username', 'tipo_autor', 'es_protagonista',
+            'empresa', 'empresa_id', 'empresa_nombre', 'ciudad', 'ciudad_nombre',
             'evento', 'evento_titulo', 'titulo', 'descripcion',
             'imagen_principal', 'video_url', 'imagenes', 'total_likes',
             'user_ha_dado_like', 'total_comentarios', 'comentarios', 'esta_activa', 'fecha_creacion'
         ]
         read_only_fields = [
-            'id', 'autor', 'autor_username', 'autor_foto_perfil', 'es_protagonista',
-            'total_likes', 'user_ha_dado_like', 'total_comentarios', 'comentarios', 'fecha_creacion'
+            'id', 'autor', 'autor_username', 'autor_nombre', 'autor_foto_perfil',
+            'creado_por', 'creado_por_username', 'tipo_autor', 'es_protagonista',
+            'empresa_id', 'empresa_nombre', 'total_likes', 'user_ha_dado_like',
+            'total_comentarios', 'comentarios', 'fecha_creacion'
         ]
+
+    def get_autor_nombre(self, obj):
+        if obj.tipo_autor == 'EMPRESA' and obj.empresa:
+            return obj.empresa.nombre
+        usuario = obj.creado_por or obj.autor
+        if usuario:
+            nombre_completo = usuario.get_full_name().strip()
+            return nombre_completo if nombre_completo else usuario.username
+        return "Anónimo"
+
+    def get_autor_foto_perfil(self, obj):
+        request = self.context.get('request')
+        img_field = None
+        if obj.tipo_autor == 'EMPRESA' and obj.empresa and obj.empresa.imagen_portada:
+            img_field = obj.empresa.imagen_portada
+        elif obj.creado_por and obj.creado_por.foto_perfil:
+            img_field = obj.creado_por.foto_perfil
+        elif obj.autor and obj.autor.foto_perfil:
+            img_field = obj.autor.foto_perfil
+
+        if img_field:
+            if request:
+                try:
+                    return request.build_absolute_uri(img_field.url)
+                except Exception:
+                    return img_field.url
+            return img_field.url
+        return None
 
     def get_user_ha_dado_like(self, obj):
         request = self.context.get('request')

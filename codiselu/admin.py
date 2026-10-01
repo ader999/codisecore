@@ -3,7 +3,7 @@ from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.http import FileResponse
 from .models import (
     User, Ciudad, CircuitoCreativo, PuntoInteres, DatoHistorico,
-    GaleriaMultimedia, UsuarioPuntoVisitado, Empresa, OportunidadInversion,
+    GaleriaMultimedia, UsuarioPuntoVisitado, Empresa, EmpresaMiembro, OportunidadInversion,
     InversionTurista, Evento, EventoAsistencia, Publicacion, PublicacionImagen,
     ComentarioPublicacion
 )
@@ -326,12 +326,18 @@ class OportunidadInversionInline(admin.TabularInline):
         )
 
 
+class EmpresaMiembroInline(admin.TabularInline):
+    model = EmpresaMiembro
+    extra = 1
+    autocomplete_fields = ['usuario']
+
+
 @admin.register(Empresa)
 class EmpresaAdmin(OcultarTraduccionesAlCrearMixin, admin.ModelAdmin):
     list_display = ('id', 'nombre', 'usuario', 'categoria', 'ciudad', 'acepta_inversiones', 'fecha_creacion')
     list_filter = ('acepta_inversiones', 'categoria', 'ciudad')
     search_fields = ('nombre', 'nombre_en', 'nombre_zh', 'descripcion', 'usuario__username')
-    inlines = [OportunidadInversionInline]
+    inlines = [EmpresaMiembroInline, OportunidadInversionInline]
     fieldsets = (
         ('Información General (Español)', {
             'fields': (
@@ -457,11 +463,18 @@ class ComentarioPublicacionInline(admin.TabularInline):
     extra = 1
 
 
+@admin.register(EmpresaMiembro)
+class EmpresaMiembroAdmin(admin.ModelAdmin):
+    list_display = ('id', 'usuario', 'empresa', 'rol', 'fecha_incorporacion')
+    list_filter = ('rol', 'fecha_incorporacion')
+    search_fields = ('usuario__username', 'usuario__email', 'empresa__nombre')
+
+
 @admin.register(Publicacion)
 class PublicacionAdmin(admin.ModelAdmin):
-    list_display = ('id', 'autor', 'titulo', 'empresa', 'ciudad', 'evento', 'total_likes', 'total_comentarios', 'esta_activa', 'fecha_creacion')
-    list_filter = ('esta_activa', 'ciudad', 'fecha_creacion')
-    search_fields = ('titulo', 'descripcion', 'autor__username', 'empresa__nombre')
+    list_display = ('id', 'autor', 'creado_por', 'tipo_autor', 'titulo', 'empresa', 'ciudad', 'evento', 'total_likes', 'total_comentarios', 'esta_activa', 'fecha_creacion')
+    list_filter = ('tipo_autor', 'esta_activa', 'ciudad', 'fecha_creacion')
+    search_fields = ('titulo', 'descripcion', 'autor__username', 'creado_por__username', 'empresa__nombre')
     inlines = [PublicacionImagenInline, ComentarioPublicacionInline]
 
 

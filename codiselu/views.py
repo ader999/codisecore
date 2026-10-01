@@ -8,9 +8,10 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.decorators import action
+from rest_framework.exceptions import PermissionDenied, ValidationError
 from .models import (
     User, Ciudad, CircuitoCreativo, PuntoInteres, DatoHistorico,
-    GaleriaMultimedia, UsuarioPuntoVisitado, Empresa, OportunidadInversion,
+    GaleriaMultimedia, UsuarioPuntoVisitado, Empresa, EmpresaMiembro, OportunidadInversion,
     InversionTurista, Evento, EventoAsistencia, Publicacion, PublicacionImagen,
     ComentarioPublicacion
 )
@@ -26,6 +27,8 @@ from .serializers import (
     GaleriaMultimediaSerializer,
     UsuarioPuntoVisitadoSerializer,
     EmpresaSerializer,
+    EmpresaMiembroSerializer,
+    MiEmpresaSerializer,
     OportunidadInversionSerializer,
     InversionTuristaSerializer,
     EventoSerializer,
@@ -33,16 +36,14 @@ from .serializers import (
     PublicacionImagenSerializer,
     ComentarioPublicacionSerializer
 )
-
-
-class IsAutorOrReadOnly(permissions.BasePermission):
-    """
-    Permiso personalizado que solo permite al autor del objeto (o a un administrador) modificarlo o eliminarlo.
-    """
-    def has_object_permission(self, request, view, obj):
-        if request.method in permissions.SAFE_METHODS:
-            return True
-        return hasattr(obj, 'autor') and (obj.autor == request.user or (request.user and request.user.is_staff))
+from .empresa_context import CompanyContextMixin, obtener_empresa_activa
+from .permissions import (
+    IsAutorOrReadOnly,
+    IsEmpresaAdminOrReadOnly,
+    IsEmpresaMemberOrReadOnly,
+    IsPublicacionAuthorOrCompanyMember,
+    IsEventoCreatorOrCompanyMember
+)
 
 
 
@@ -455,18 +456,104 @@ class VisitaViewSet(viewsets.ModelViewSet):
         return Response(ids)
 
 
-class EmpresaViewSet(viewsets.ModelViewSet):
+class EmpresaViewSet(CompanyContextMixin, viewsets.ModelViewSet):
     """
     Endpoint para consultar y administrar Empresas y Destinos Turísticos.
     - Lectura (GET): Pública para cualquier usuario/turista.
-    - Creación / Edición (POST/PUT/DELETE): Requiere autenticación.
+    - Creación (POST): Requiere autenticación.
+    - Edición / Eliminación (PUT/PATCH/DELETE): Requiere ser OWNER o ADMIN de la empresa.
     """
     queryset = Empresa.objects.all().order_by('-fecha_creacion')
     serializer_class = EmpresaSerializer
-    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly, IsEmpresaAdminOrReadOnly]
 
     def perform_create(self, serializer):
-        serializer.save(usuario=self.request.user)
+        empresa = serializer.save(usuario=self.request.user)
+        # Asignar automáticamente al creador como OWNER
+        EmpresaMiembro.objects.get_or_create(
+            usuario=self.request.user,
+            empresa=empresa,
+            defaults={'rol': EmpresaMiembro.ROL_OWNER}
+        )
+        if not self.request.user.es_protagonista:
+            self.request.user.es_protagonista = True
+            self.request.user.save(update_fields=['es_protagonista'])
+
+    @action(detail=False, methods=['get'], permission_classes=[permissions.IsAuthenticated], url_path='mis_empresas')
+    def mis_empresas(self, request):
+        """
+        GET /api/empresas/mis_empresas/
+        Lista únicamente las empresas que el usuario autenticado administra o en las que colabora,
+        con su rol correspondiente (OWNER, ADMIN, EDITOR) para facilitar el cambio de perfil en la app móvil.
+        """
+        user = request.user
+        # Sincronizar empresas donde el usuario figura como creador pero no tiene membresía
+        for emp in Empresa.objects.filter(usuario=user):
+            EmpresaMiembro.objects.get_or_create(
+                usuario=user,
+                empresa=emp,
+                defaults={'rol': EmpresaMiembro.ROL_OWNER}
+            )
+
+        membresias = EmpresaMiembro.objects.filter(usuario=user).select_related('empresa', 'empresa__ciudad')
+        empresas = []
+        for m in membresias:
+            emp = m.empresa
+            emp.user_rol = m.rol
+            emp.user_fecha_incorporacion = m.fecha_incorporacion
+            empresas.append(emp)
+
+        serializer = MiEmpresaSerializer(empresas, many=True, context={'request': request})
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    @action(detail=True, methods=['get', 'post'], permission_classes=[permissions.IsAuthenticated], url_path='miembros')
+    def miembros(self, request, pk=None):
+        """
+        GET /api/empresas/{id}/miembros/: Lista los miembros del equipo de la empresa.
+        POST /api/empresas/{id}/miembros/: Agrega o actualiza el rol de un miembro (solo OWNER o ADMIN).
+        """
+        empresa = self.get_object()
+        user = request.user
+        es_admin_empresa = user.is_staff or empresa.usuario == user or empresa.miembros.filter(
+            usuario=user, rol__in=[EmpresaMiembro.ROL_OWNER, EmpresaMiembro.ROL_ADMIN]
+        ).exists()
+
+        if request.method == 'GET':
+            miembros = empresa.miembros.select_related('usuario').all()
+            serializer = EmpresaMiembroSerializer(miembros, many=True, context={'request': request})
+            return Response(serializer.data, status=status.HTTP_200_OK)
+
+        if not es_admin_empresa:
+            raise PermissionDenied("Solo el propietario o administradores de la empresa pueden gestionar sus miembros.")
+
+        usuario_id = request.data.get('usuario') or request.data.get('usuario_id')
+        username = request.data.get('username')
+        rol = request.data.get('rol', EmpresaMiembro.ROL_EDITOR).upper()
+
+        if rol not in [EmpresaMiembro.ROL_OWNER, EmpresaMiembro.ROL_ADMIN, EmpresaMiembro.ROL_EDITOR]:
+            return Response({"error": "Rol inválido. Opciones permitidas: OWNER, ADMIN, EDITOR."}, status=status.HTTP_400_BAD_REQUEST)
+
+        target_user = None
+        if usuario_id:
+            target_user = User.objects.filter(id=usuario_id).first()
+        elif username:
+            target_user = User.objects.filter(username=username).first()
+
+        if not target_user:
+            return Response({"error": "No se encontró el usuario especificado para agregar como miembro."}, status=status.HTTP_404_NOT_FOUND)
+
+        miembro, created = EmpresaMiembro.objects.update_or_create(
+            empresa=empresa,
+            usuario=target_user,
+            defaults={'rol': rol}
+        )
+        if not target_user.es_protagonista:
+            target_user.es_protagonista = True
+            target_user.save(update_fields=['es_protagonista'])
+
+        serializer = EmpresaMiembroSerializer(miembro, context={'request': request})
+        status_code = status.HTTP_201_CREATED if created else status.HTTP_200_OK
+        return Response(serializer.data, status=status_code)
 
     def get_queryset(self):
         queryset = super().get_queryset()
@@ -526,15 +613,16 @@ class InversionTuristaViewSet(viewsets.ModelViewSet):
         serializer.save(inversionista=self.request.user)
 
 
-class EventoViewSet(viewsets.ModelViewSet):
+class EventoViewSet(CompanyContextMixin, viewsets.ModelViewSet):
     """
     Endpoint para consultar y registrar eventos creados por protagonistas, empresas o administradores.
+    - Soporta contexto de empresa activa mediante encabezado 'X-Company-Id'.
     - Los administradores (staff) pueden registrar eventos oficiales de las ciudades.
     - Soporta filtrado por mural de publicación (?en_mural=true o ?mural=true) y eventos oficiales (?es_oficial=true).
     """
     queryset = Evento.objects.filter(esta_activo=True).order_by('-fecha_inicio')
     serializer_class = EventoSerializer
-    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly, IsEventoCreatorOrCompanyMember]
 
     def perform_create(self, serializer):
         user = self.request.user
@@ -543,7 +631,16 @@ class EventoViewSet(viewsets.ModelViewSet):
             es_oficial = user.is_staff
         else:
             es_oficial = es_oficial_data if user.is_staff else False
-        serializer.save(creador=user, es_oficial=es_oficial)
+
+        empresa = serializer.validated_data.get('empresa')
+        if not empresa and self.empresa_activa:
+            empresa = self.empresa_activa
+        elif empresa:
+            es_miembro = EmpresaMiembro.objects.filter(empresa=empresa, usuario=user).exists()
+            if not (es_miembro or empresa.usuario == user or user.is_staff):
+                raise PermissionDenied("No tienes permisos para vincular este evento a la empresa indicada.")
+
+        serializer.save(creador=user, es_oficial=es_oficial, empresa=empresa)
 
     def get_queryset(self):
         from django.utils import timezone
@@ -619,18 +716,42 @@ class EventoViewSet(viewsets.ModelViewSet):
         }, status=status.HTTP_200_OK)
 
 
-class PublicacionViewSet(viewsets.ModelViewSet):
+class PublicacionViewSet(CompanyContextMixin, viewsets.ModelViewSet):
     """
-    Endpoint para consultar y crear publicaciones de turistas y protagonistas/empresas.
-    - Soporta la subida de múltiples imágenes secundarias mediante el parámetro FILES 'imagenes'.
-    - Reacción de me gusta mediante POST /api/publicaciones/{id}/like/
+    Endpoint para consultar y crear publicaciones de turistas y páginas de empresas.
+    - Soporta cambio de contexto mediante encabezado 'X-Company-Id: <id>'.
+    - Permite autoría dual: si hay empresa activa (o indicada en el body y autorizada), publica como EMPRESA.
+    - Permisos de edición/eliminación: solo el autor o miembros autorizados de la empresa pueden modificarla.
     """
     queryset = Publicacion.objects.filter(esta_activa=True).order_by('-fecha_creacion')
     serializer_class = PublicacionSerializer
-    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly, IsPublicacionAuthorOrCompanyMember]
 
     def perform_create(self, serializer):
-        publicacion = serializer.save(autor=self.request.user)
+        user = self.request.user
+        empresa_contexto = self.empresa_activa
+        empresa_en_data = serializer.validated_data.get('empresa')
+
+        empresa_final = None
+        tipo_autor = 'USUARIO'
+
+        if empresa_contexto:
+            empresa_final = empresa_contexto
+            tipo_autor = 'EMPRESA'
+        elif empresa_en_data:
+            # Validar que el usuario tenga permisos sobre la empresa indicada en los datos
+            es_miembro = EmpresaMiembro.objects.filter(empresa=empresa_en_data, usuario=user).exists()
+            if not (es_miembro or empresa_en_data.usuario == user or user.is_staff):
+                raise PermissionDenied("No tienes permisos para publicar en nombre de esta empresa.")
+            empresa_final = empresa_en_data
+            tipo_autor = 'EMPRESA'
+
+        publicacion = serializer.save(
+            autor=user,
+            creado_por=user,
+            empresa=empresa_final,
+            tipo_autor=tipo_autor
+        )
         imagenes = self.request.FILES.getlist('imagenes')
         for img in imagenes:
             PublicacionImagen.objects.create(publicacion=publicacion, imagen=img)
@@ -654,7 +775,15 @@ class PublicacionViewSet(viewsets.ModelViewSet):
 
         autor_id = self.request.query_params.get('autor')
         if autor_id:
-            queryset = queryset.filter(autor_id=autor_id)
+            queryset = queryset.filter(models.Q(autor_id=autor_id) | models.Q(creado_por_id=autor_id))
+
+        creado_por_id = self.request.query_params.get('creado_por')
+        if creado_por_id:
+            queryset = queryset.filter(creado_por_id=creado_por_id)
+
+        tipo_autor = self.request.query_params.get('tipo_autor')
+        if tipo_autor:
+            queryset = queryset.filter(tipo_autor=tipo_autor.upper())
 
         return queryset
 
