@@ -705,13 +705,51 @@ class PublicacionImagenSerializer(serializers.ModelSerializer):
 
 class ComentarioPublicacionSerializer(serializers.ModelSerializer):
     autor_username = serializers.ReadOnlyField(source='autor.username')
-    autor_foto_perfil = serializers.ImageField(source='autor.foto_perfil', read_only=True)
+    autor_nombre = serializers.SerializerMethodField()
+    autor_foto_perfil = serializers.SerializerMethodField()
     publicacion = serializers.PrimaryKeyRelatedField(queryset=Publicacion.objects.all(), required=False)
+    empresa = serializers.PrimaryKeyRelatedField(queryset=Empresa.objects.all(), required=False, allow_null=True)
+    empresa_id = serializers.ReadOnlyField()
+    empresa_nombre = serializers.ReadOnlyField(source='empresa.nombre', default=None)
+    tipo_autor = serializers.ReadOnlyField()
 
     class Meta:
         model = ComentarioPublicacion
-        fields = ['id', 'publicacion', 'autor', 'autor_username', 'autor_foto_perfil', 'contenido', 'esta_activo', 'fecha_creacion']
-        read_only_fields = ['id', 'autor', 'autor_username', 'autor_foto_perfil', 'fecha_creacion']
+        fields = [
+            'id', 'publicacion', 'autor', 'autor_username', 'autor_nombre',
+            'autor_foto_perfil', 'empresa', 'empresa_id', 'empresa_nombre',
+            'tipo_autor', 'contenido', 'esta_activo', 'fecha_creacion'
+        ]
+        read_only_fields = ['id', 'autor', 'autor_username', 'autor_nombre', 'autor_foto_perfil', 'empresa_id', 'empresa_nombre', 'tipo_autor', 'fecha_creacion']
+
+    def get_autor_nombre(self, obj):
+        if obj.tipo_autor == 'EMPRESA' and obj.empresa:
+            return obj.empresa.nombre
+        usuario = obj.autor
+        if usuario:
+            nombre_completo = usuario.get_full_name().strip()
+            return nombre_completo if nombre_completo else usuario.username
+        return "Anónimo"
+
+    def get_autor_foto_perfil(self, obj):
+        request = self.context.get('request')
+        img_field = None
+        if obj.tipo_autor == 'EMPRESA':
+            if obj.empresa and obj.empresa.imagen_portada:
+                img_field = obj.empresa.imagen_portada
+            else:
+                return None
+        elif obj.autor and obj.autor.foto_perfil:
+            img_field = obj.autor.foto_perfil
+
+        if img_field:
+            if request:
+                try:
+                    return request.build_absolute_uri(img_field.url)
+                except Exception:
+                    return img_field.url
+            return img_field.url
+        return None
 
 
 class PublicacionSerializer(serializers.ModelSerializer):
@@ -760,8 +798,11 @@ class PublicacionSerializer(serializers.ModelSerializer):
     def get_autor_foto_perfil(self, obj):
         request = self.context.get('request')
         img_field = None
-        if obj.tipo_autor == 'EMPRESA' and obj.empresa and obj.empresa.imagen_portada:
-            img_field = obj.empresa.imagen_portada
+        if obj.tipo_autor == 'EMPRESA':
+            if obj.empresa and obj.empresa.imagen_portada:
+                img_field = obj.empresa.imagen_portada
+            else:
+                return None
         elif obj.creado_por and obj.creado_por.foto_perfil:
             img_field = obj.creado_por.foto_perfil
         elif obj.autor and obj.autor.foto_perfil:
@@ -778,9 +819,26 @@ class PublicacionSerializer(serializers.ModelSerializer):
 
     def get_user_ha_dado_like(self, obj):
         request = self.context.get('request')
-        if request and request.user and request.user.is_authenticated:
-            return obj.likes.filter(id=request.user.id).exists()
-        return False
+        if not (request and request.user and request.user.is_authenticated):
+            return False
+
+        empresa_contexto = getattr(request, 'empresa_activa', None)
+        if not empresa_contexto:
+            header_val = None
+            if hasattr(request, 'headers'):
+                header_val = request.headers.get('X-Company-Id')
+            if not header_val and hasattr(request, 'META'):
+                header_val = request.META.get('HTTP_X_COMPANY_ID')
+            if header_val:
+                from .empresa_context import obtener_empresa_activa
+                try:
+                    empresa_contexto = obtener_empresa_activa(request)
+                except Exception:
+                    empresa_contexto = None
+
+        if empresa_contexto:
+            return obj.empresa_likes.filter(id=empresa_contexto.id).exists()
+        return obj.likes.filter(id=request.user.id).exists()
 
 
 class EventoSerializer(TraduccionSerializerMixin, serializers.ModelSerializer):

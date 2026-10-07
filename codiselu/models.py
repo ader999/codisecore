@@ -468,6 +468,7 @@ class Publicacion(models.Model):
     imagen_principal = models.ImageField(upload_to='publicaciones/', blank=True, null=True)
     video_url = models.URLField(blank=True, null=True)
     likes = models.ManyToManyField(settings.AUTH_USER_MODEL, related_name='publicaciones_dado_like', blank=True)
+    empresa_likes = models.ManyToManyField(Empresa, related_name='publicaciones_dado_like', blank=True)
     esta_activa = models.BooleanField(default=True)
     fecha_creacion = models.DateTimeField(auto_now_add=True)
 
@@ -478,7 +479,7 @@ class Publicacion(models.Model):
 
     @property
     def total_likes(self):
-        return self.likes.count()
+        return self.likes.count() + self.empresa_likes.count()
 
     @property
     def total_comentarios(self):
@@ -525,6 +526,8 @@ class PublicacionImagen(models.Model):
 class ComentarioPublicacion(models.Model):
     publicacion = models.ForeignKey(Publicacion, on_delete=models.CASCADE, related_name='comentarios')
     autor = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='comentarios_publicaciones')
+    empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, null=True, blank=True, related_name='comentarios_publicaciones')
+    tipo_autor = models.CharField(max_length=20, choices=Publicacion.TIPO_AUTOR_CHOICES, default='USUARIO')
     contenido = models.TextField()
     esta_activo = models.BooleanField(default=True)
     fecha_creacion = models.DateTimeField(auto_now_add=True)

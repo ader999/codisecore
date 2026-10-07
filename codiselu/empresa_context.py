@@ -60,7 +60,11 @@ def obtener_empresa_activa(request):
     if not empresa:
         raise PermissionDenied("La empresa especificada en X-Company-Id no existe.")
 
-    if empresa.usuario == user:
+    mismo_email = bool(
+        user.email and empresa.email_contacto and
+        user.email.strip().lower() == empresa.email_contacto.strip().lower()
+    )
+    if empresa.usuario == user or mismo_email:
         miembro, _ = EmpresaMiembro.objects.get_or_create(
             empresa=empresa,
             usuario=user,

@@ -525,8 +525,11 @@ class EmpresaViewSet(CompanyContextMixin, viewsets.ModelViewSet):
         con su rol correspondiente (OWNER, ADMIN, EDITOR) para facilitar el cambio de perfil en la app móvil.
         """
         user = request.user
-        # Sincronizar empresas donde el usuario figura como creador pero no tiene membresía
-        for emp in Empresa.objects.filter(usuario=user):
+        # Sincronizar empresas donde el usuario figura como creador o contacto por email pero no tiene membresía
+        filtro_sync = models.Q(usuario=user)
+        if user.email:
+            filtro_sync |= models.Q(email_contacto__iexact=user.email.strip())
+        for emp in Empresa.objects.filter(filtro_sync):
             EmpresaMiembro.objects.get_or_create(
                 usuario=user,
                 empresa=emp,
@@ -675,8 +678,19 @@ class EventoViewSet(CompanyContextMixin, viewsets.ModelViewSet):
             empresa = self.empresa_activa
         elif empresa:
             es_miembro = EmpresaMiembro.objects.filter(empresa=empresa, usuario=user).exists()
-            if not (es_miembro or empresa.usuario == user or user.is_staff):
+            es_creador = empresa.usuario == user
+            mismo_email = bool(
+                user.email and empresa.email_contacto and
+                user.email.strip().lower() == empresa.email_contacto.strip().lower()
+            )
+            if not (es_miembro or es_creador or mismo_email or user.is_staff):
                 raise PermissionDenied("No tienes permisos para vincular este evento a la empresa indicada.")
+            if mismo_email and not es_miembro:
+                EmpresaMiembro.objects.get_or_create(
+                    empresa=empresa,
+                    usuario=user,
+                    defaults={'rol': EmpresaMiembro.ROL_OWNER}
+                )
 
         serializer.save(creador=user, es_oficial=es_oficial, empresa=empresa)
 
@@ -779,8 +793,19 @@ class PublicacionViewSet(CompanyContextMixin, viewsets.ModelViewSet):
         elif empresa_en_data:
             # Validar que el usuario tenga permisos sobre la empresa indicada en los datos
             es_miembro = EmpresaMiembro.objects.filter(empresa=empresa_en_data, usuario=user).exists()
-            if not (es_miembro or empresa_en_data.usuario == user or user.is_staff):
+            es_creador = empresa_en_data.usuario == user
+            mismo_email = bool(
+                user.email and empresa_en_data.email_contacto and
+                user.email.strip().lower() == empresa_en_data.email_contacto.strip().lower()
+            )
+            if not (es_miembro or es_creador or mismo_email or user.is_staff):
                 raise PermissionDenied("No tienes permisos para publicar en nombre de esta empresa.")
+            if mismo_email and not es_miembro:
+                EmpresaMiembro.objects.get_or_create(
+                    empresa=empresa_en_data,
+                    usuario=user,
+                    defaults={'rol': EmpresaMiembro.ROL_OWNER}
+                )
             empresa_final = empresa_en_data
             tipo_autor = 'EMPRESA'
 
@@ -829,18 +854,42 @@ class PublicacionViewSet(CompanyContextMixin, viewsets.ModelViewSet):
     def toggle_like(self, request, pk=None):
         """
         Endpoint para alternar (toggle) el like en una publicación.
+        Soporta modo Usuario y modo Empresa independiente (mediante X-Company-Id o campo empresa).
         POST /api/publicaciones/{id}/like/
         """
         publicacion = self.get_object()
         user = request.user
-        if publicacion.likes.filter(id=user.id).exists():
-            publicacion.likes.remove(user)
-            ha_dado_like = False
-            mensaje = "Like eliminado de la publicación."
+
+        empresa_contexto = self.empresa_activa
+        if not empresa_contexto:
+            empresa_id = request.data.get('empresa') or request.data.get('empresa_id') or request.query_params.get('empresa')
+            if empresa_id:
+                empresa_obj = Empresa.objects.filter(id=empresa_id).first()
+                if empresa_obj:
+                    es_miembro = empresa_obj.miembros.filter(usuario=user).exists()
+                    mismo_email = bool(user.email and empresa_obj.email_contacto and user.email.strip().lower() == empresa_obj.email_contacto.strip().lower())
+                    if es_miembro or empresa_obj.usuario == user or mismo_email or user.is_staff:
+                        empresa_contexto = empresa_obj
+
+        if empresa_contexto:
+            if publicacion.empresa_likes.filter(id=empresa_contexto.id).exists():
+                publicacion.empresa_likes.remove(empresa_contexto)
+                ha_dado_like = False
+                mensaje = f"Like de {empresa_contexto.nombre} eliminado de la publicación."
+            else:
+                publicacion.empresa_likes.add(empresa_contexto)
+                ha_dado_like = True
+                mensaje = f"Like de {empresa_contexto.nombre} agregado a la publicación."
         else:
-            publicacion.likes.add(user)
-            ha_dado_like = True
-            mensaje = "Like agregado a la publicación."
+            if publicacion.likes.filter(id=user.id).exists():
+                publicacion.likes.remove(user)
+                ha_dado_like = False
+                mensaje = "Like eliminado de la publicación."
+            else:
+                publicacion.likes.add(user)
+                ha_dado_like = True
+                mensaje = "Like agregado a la publicación."
+
         return Response({
             'message': mensaje,
             'ha_dado_like': ha_dado_like,
@@ -867,12 +916,35 @@ class PublicacionViewSet(CompanyContextMixin, viewsets.ModelViewSet):
             
             serializer = ComentarioPublicacionSerializer(data=request.data, context={'request': request})
             if serializer.is_valid():
-                serializer.save(autor=request.user, publicacion=publicacion)
+                empresa_contexto = self.empresa_activa
+                if not empresa_contexto:
+                    empresa_id = request.data.get('empresa') or request.data.get('empresa_id')
+                    if empresa_id:
+                        empresa_obj = Empresa.objects.filter(id=empresa_id).first()
+                        if empresa_obj:
+                            es_miembro = empresa_obj.miembros.filter(usuario=request.user).exists()
+                            mismo_email = bool(request.user.email and empresa_obj.email_contacto and request.user.email.strip().lower() == empresa_obj.email_contacto.strip().lower())
+                            if es_miembro or empresa_obj.usuario == request.user or mismo_email or request.user.is_staff:
+                                empresa_contexto = empresa_obj
+
+                if empresa_contexto:
+                    serializer.save(
+                        autor=request.user,
+                        publicacion=publicacion,
+                        empresa=empresa_contexto,
+                        tipo_autor='EMPRESA'
+                    )
+                else:
+                    serializer.save(
+                        autor=request.user,
+                        publicacion=publicacion,
+                        tipo_autor='USUARIO'
+                    )
                 return Response(serializer.data, status=status.HTTP_201_CREATED)
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-class ComentarioPublicacionViewSet(viewsets.ModelViewSet):
+class ComentarioPublicacionViewSet(CompanyContextMixin, viewsets.ModelViewSet):
     """
     Endpoint CRUD para gestionar comentarios en publicaciones.
     - GET /api/comentarios-publicaciones/?publicacion={publicacion_id}
@@ -886,7 +958,22 @@ class ComentarioPublicacionViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticatedOrReadOnly, IsAutorOrReadOnly]
 
     def perform_create(self, serializer):
-        serializer.save(autor=self.request.user)
+        empresa_contexto = self.empresa_activa
+        if not empresa_contexto:
+            empresa_id = self.request.data.get('empresa') or self.request.data.get('empresa_id')
+            if empresa_id:
+                empresa_obj = Empresa.objects.filter(id=empresa_id).first()
+                if empresa_obj:
+                    user = self.request.user
+                    es_miembro = empresa_obj.miembros.filter(usuario=user).exists()
+                    mismo_email = bool(user.email and empresa_obj.email_contacto and user.email.strip().lower() == empresa_obj.email_contacto.strip().lower())
+                    if es_miembro or empresa_obj.usuario == user or mismo_email or user.is_staff:
+                        empresa_contexto = empresa_obj
+
+        if empresa_contexto:
+            serializer.save(autor=self.request.user, empresa=empresa_contexto, tipo_autor='EMPRESA')
+        else:
+            serializer.save(autor=self.request.user, tipo_autor='USUARIO')
 
     def get_queryset(self):
         queryset = ComentarioPublicacion.objects.all().order_by('fecha_creacion')
