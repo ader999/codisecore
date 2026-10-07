@@ -39,6 +39,7 @@ Guía técnica completa y modular para desarrolladores Frontend y Móviles (Andr
 ### 4. Seguridad, Gobernanza y Desarrollo
 * [**Manual de Seguridad y Buenas Prácticas**](../SEGURIDAD_Y_BUENAS_PRACTICAS.md): Gestión de secretos, defensas contra ataques (SQLi, XSS, CSRF, DDoS), políticas de contraseñas y checklist de auditoría.
 * [**Flujo de Trabajo en Git**](../GUIA_GIT_FLUJO_TRABAJO.md): Convenciones de ramas, Git Flow y políticas de commits.
+* [**Guía de Bienvenida y Onboarding (Visión de Producto y Negocio)**](GUIA_ONBOARDING_NO_TECNICA.md): Todo lo que un nuevo integrante debe saber sobre la app sin tecnicismos (visión, actores, módulos y glosario).
 * [**Contexto del Proyecto**](../CONTEXTO_PROYECTO.md): Alcance funcional y requerimientos del reto de Ciudades Creativas.
 * [**Plan de Eliminación de Campo Tipo Galería**](../PLAN_ELIMINACION_CAMPO_TIPO_GALERIA.md): Registro histórico de migración y optimización del esquema de datos.
 

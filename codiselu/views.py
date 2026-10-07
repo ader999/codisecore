@@ -692,6 +692,9 @@ class EventoViewSet(CompanyContextMixin, viewsets.ModelViewSet):
                     defaults={'rol': EmpresaMiembro.ROL_OWNER}
                 )
 
+        if not empresa and not user.is_staff:
+            raise PermissionDenied("Solo las empresas o el personal autorizado pueden registrar eventos.")
+
         serializer.save(creador=user, es_oficial=es_oficial, empresa=empresa)
 
     def get_queryset(self):
